@@ -11,54 +11,49 @@ validCoachEmail = "coach@fitgym.com"
 validCoachPassword :: String
 validCoachPassword = "coach123"
 
--- Main function to display the login menu and get user choice
+-- Function to perform login
+performLogin :: (String -> String -> Bool) -> String -> IO()
+performLogin validCredentials userType = do
+       putStrLn "\n***************************************"
+       putStrLn "     Welcome to the FitGym System      "
+       putStrLn "***************************************"
+       putStr "Enter your email: "
+       email <- getLine
+       putStr "Enter your password: "
+       password <- getLine
+       if validCredentials email password
+              then putStrLn ("Login successful. Welcome " ++ userType ++ "!")
+              else do 
+                     putStrLn "Invalid credentials. Please try again."
+                     performLogin validCredentials userType
+
+validCredentials :: String -> String -> Bool
+validCredentials email password
+       | email == validUserEmail && password == validUserPassword = True
+       | email == validCoachEmail && password == validCoachPassword = True
+       | otherwise = False
+
+-- Function to display the login menu and get user choice
 getChoice :: IO Int
 getChoice = do
-       putStrLn "***************************************" 
-       putStrLn "     Welcome to the FitGym System      " 
-       putStrLn "***************************************" 
-       putStrLn "1. Login as User" 
-       putStrLn "2. Login as Coach" 
-       putStrLn "3. Exit" 
-       putStr "Enter your choice: " 
-       choice <- getLine
-       return (read choice :: Int)
+    putStrLn "***************************************"
+    putStrLn "     Welcome to the FitGym System      "
+    putStrLn "***************************************"
+    putStrLn "1. Login as User"
+    putStrLn "2. Login as Coach"
+    putStrLn "3. Exit"
+    putStr "Enter your choice: "
+    choice <- getLine
+    return (read choice :: Int)
 
--- Function to handle user login with validation
-loginAsUser :: IO ()
-loginAsUser = do
-    putStrLn "\nUser Login"
-    putStr "Enter your email: "
-    email <- getLine
-    putStr "Enter your password: "
-    password <- getLine
-    if email == validUserEmail && password == validUserPassword
-        then putStrLn "\nWelcome! You have successfully logged in.\n"
-        else do
-            putStrLn "\nInvalid email or password. Please try again.\n"
-            loginAsUser
-
--- Function to handle coach login with validation
-loginAsCoach :: IO ()
-loginAsCoach = do
-    putStrLn "\nCoach Login"
-    putStr "Enter your email: "
-    email <- getLine
-    putStr "Enter your password: "
-    password <- getLine
-    if email == validCoachEmail && password == validCoachPassword
-        then putStrLn "\nWelcome, Coach! You have successfully logged in.\n"
-        else do
-            putStrLn "\nInvalid email or password. Please try again.\n"
-            loginAsCoach
-
+-- Main function
+main :: IO ()
 main = do
-       choice <- getChoice
-       case choice of
-            1 -> loginAsUser
-            2 -> loginAsCoach
-            3 -> putStrLn "Exiting"
-            _ -> do
-              putStrLn "Invalid choice. Please try again.\n"
-              main
-
+    choice <- getChoice
+    case choice of
+        1 -> performLogin validCredentials "User"
+        2 -> performLogin validCredentials "Coach"
+        3 -> putStrLn "Exiting the system. Goodbye!"
+        _ -> do
+            putStrLn "Invalid choice. Please try again.\n"
+            main -- Recursively call main to allow another attempt

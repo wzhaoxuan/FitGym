@@ -18,5 +18,7 @@ main = do
             1 -> putStrLn "Login as User"
             2 -> putStrLn "Login as Coach"
             3 -> putStrLn "Exiting"
-            _ -> putStrLn "Invalid choice"
+            _ -> do
+              putStrLn "Invalid choice. Please try again.\n"
+              main
                 

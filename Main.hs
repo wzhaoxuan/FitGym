@@ -1,18 +1,12 @@
 -- Predefined credentials for user and coach
-validUserEmail :: String
-validUserEmail = "user@fitgym.com"
+validEmail :: [String]
+validEmail = ["user@fitgym.com", "coach@fitgym.com"]
 
-validUserPassword :: String
-validUserPassword = "user123"
-
-validCoachEmail :: String
-validCoachEmail = "coach@fitgym.com"
-
-validCoachPassword :: String
-validCoachPassword = "coach123"
+validPassword :: [String]
+validPassword = ["user123", "coach123"]
 
 -- Function to perform login
-performLogin :: (String -> String -> Bool) -> String -> IO()
+performLogin :: (String -> String -> Maybe String) -> String -> IO()
 performLogin validCredentials userType = do
        putStrLn "\n***************************************"
        putStrLn "     Welcome to the FitGym System      "
@@ -21,17 +15,20 @@ performLogin validCredentials userType = do
        email <- getLine
        putStr "Enter your password: "
        password <- getLine
-       if validCredentials email password
-              then putStrLn ("Login successful. Welcome " ++ userType ++ "!")
-              else do 
+       -- Apply the validation function and handle the result using a Functor
+       case validCredentials email password of
+              Just _ -> putStrLn ("Login successful. Welcome " ++ userType ++ "!")
+              Nothing -> do
                      putStrLn "Invalid credentials. Please try again."
                      performLogin validCredentials userType
+       
 
-validCredentials :: String -> String -> Bool
-validCredentials email password
-       | email == validUserEmail && password == validUserPassword = True
-       | email == validCoachEmail && password == validCoachPassword = True
-       | otherwise = False
+validCredentials :: String -> String -> Maybe String
+validCredentials email password = 
+       -- Zip the emaill and password lists and lookup the email
+       case lookup email (zip validEmail validPassword) of
+              Just correctPassword | correctPassword == password -> Just email
+              _ -> Nothing
 
 -- Function to display the login menu and get user choice
 getChoice :: IO Int
@@ -39,8 +36,8 @@ getChoice = do
     putStrLn "***************************************"
     putStrLn "     Welcome to the FitGym System      "
     putStrLn "***************************************"
-    putStrLn "1. Login as User"
-    putStrLn "2. Login as Coach"
+    putStrLn "1. Login"
+    putStrLn "2. Sign Up"
     putStrLn "3. Exit"
     putStr "Enter your choice: "
     choice <- getLine

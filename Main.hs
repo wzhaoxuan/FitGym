@@ -1,10 +1,13 @@
 -- Predefined credentials for user and coach
-validEmail :: [String]
-validEmail = ["user@fitgym.com", "coach@fitgym.com"]
+validUserEmail :: [String]
+validUserEmail = ["wzhao@fitgym.com", "zhengtan@fitgym.com"]
+validUserPassword :: [String]
+validUserPassword = ["wz123", "zt123"]
 
-validPassword :: [String]
-validPassword = ["user123", "coach123"]
-
+validCoachEmail :: [String]
+validCoachEmail = ["Jane@fitgym.com", "Jack@fitgym.com"]
+validCoachPassword :: [String]
+validCoachPassword = ["Jane123", "Jack123"]
 -- Define the Email type
 type Email = String
 type Password = String
@@ -19,10 +22,10 @@ class Loginable a where
 -- Implement the Loginable instance for UserType
 instance Loginable UserType where
        login (User email password) enteredEmail enteredPassword
-        | email == enteredEmail && password == enteredPassword = Just "Login successful. Welcome User!"
+        | email == enteredEmail && password == enteredPassword = Just $ "Login successful. Welcome user: " ++ email ++ "!"
         | otherwise = Nothing
        login (Coach email password) enteredEmail enteredPassword
-        | email == enteredEmail && password == enteredPassword = Just "Login successful. Welcome Coach!"
+        | email == enteredEmail && password == enteredPassword = Just $ "Login successful. Welcome coach: " ++ email ++ "!"
         | otherwise = Nothing
 
 
@@ -52,12 +55,13 @@ showUserType (Coach _ _) = "Coach"
 validCredentials :: String -> String -> Maybe String
 validCredentials email password = 
        -- Zip the email and password lists and lookup the email
-       case lookup email (zip validEmail validPassword) of
+       case lookup email (zip validUserEmail validUserPassword) of
               Just correctPassword | correctPassword == password -> 
-                     if email == "user@fitgym.com" 
-                     then Just (User email password) >>= \user -> login user email password -- Return User type for user
-                     else Just (Coach email password) >>= \coach -> login coach email password -- Return Coach type for coach
-              _ -> Nothing
+                     Just (User email password) >>= \user -> login user email password -- Return User type for user
+              _ -> case lookup email (zip validCoachEmail validCoachPassword) of
+                     Just correctPassword | correctPassword == password ->
+                            Just (Coach email password) >>= \coach -> login coach email password -- Return Coach type for coach 
+                     _ -> Nothing
 
 -- Function to display the login menu and get user choice
 getChoice :: IO Int

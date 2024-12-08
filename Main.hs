@@ -5,9 +5,14 @@ validEmail = ["user@fitgym.com", "coach@fitgym.com"]
 validPassword :: [String]
 validPassword = ["user123", "coach123"]
 
+-- Define the Email type
+type Email = String
+-- Define the UserType data type
+data UserType = User Email | Coach Email
+
 -- Function to perform login
-performLogin :: (String -> String -> Maybe String) -> String -> IO()
-performLogin validCredentials userType = do
+performLogin :: (String -> String -> Maybe UserType) -> IO()
+performLogin validCredentials = do
        putStrLn "\n***************************************"
        putStrLn "     Welcome to the FitGym System      "
        putStrLn "***************************************"
@@ -17,17 +22,26 @@ performLogin validCredentials userType = do
        password <- getLine
        -- Apply the validation function and handle the result using a Functor
        case validCredentials email password of
-              Just _ -> putStrLn ("Login successful. Welcome " ++ userType ++ "!")
+              Just userType -> putStrLn ("Login successful. Welcome " ++ showUserType userType ++ "!")
               Nothing -> do
                      putStrLn "Invalid credentials. Please try again."
-                     performLogin validCredentials userType
+                     performLogin validCredentials 
        
+-- Function to display the Usertype 
+showUserType :: UserType -> String
+showUserType (User _)= "User"
+showUserType (Coach _)= "Coach"
 
-validCredentials :: String -> String -> Maybe String
+-- Validate credentials and return the appropriate Usertype
+validCredentials :: String -> String -> Maybe UserType
 validCredentials email password = 
-       -- Zip the emaill and password lists and lookup the email
+       -- Zip the email and password lists and lookup the email
        case lookup email (zip validEmail validPassword) of
-              Just correctPassword | correctPassword == password -> Just email
+              Just correctPassword | correctPassword == password -> 
+                     -- Determine whether the user is a User or Coach
+                     if email == "user@fitgym.com" 
+                     then Just (User email)  -- Return User type for regular user
+                     else Just (Coach email)  -- Return Coach type for coach
               _ -> Nothing
 
 -- Function to display the login menu and get user choice
@@ -37,8 +51,7 @@ getChoice = do
     putStrLn "     Welcome to the FitGym System      "
     putStrLn "***************************************"
     putStrLn "1. Login"
-    putStrLn "2. Sign Up"
-    putStrLn "3. Exit"
+    putStrLn "2. Exit"
     putStr "Enter your choice: "
     choice <- getLine
     return (read choice :: Int)
@@ -48,9 +61,8 @@ main :: IO ()
 main = do
     choice <- getChoice
     case choice of
-        1 -> performLogin validCredentials "User"
-        2 -> performLogin validCredentials "Coach"
-        3 -> putStrLn "Exiting the system. Goodbye!"
+        1 -> performLogin validCredentials
+        2 -> putStrLn "Exiting the system. Goodbye!"
         _ -> do
             putStrLn "Invalid choice. Please try again.\n"
             main -- Recursively call main to allow another attempt

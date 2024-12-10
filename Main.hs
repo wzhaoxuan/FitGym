@@ -10,8 +10,21 @@ data Credentials = Credentials
   , password :: Password
   } deriving (Show)
 
+-- Define a new data type for Appointment
+data Appointment = Appointment
+  { userEmail :: Email
+  , coachEmail :: Email
+  , appointmentDate :: String
+  , appointmentTime :: String
+  } deriving (Show)
+
 -- Define the UserType data type that uses the Credentials type
 data UserType = User Credentials | Coach Credentials deriving (Show)
+data Action = GymWork | MakeAppointment deriving (Show, Read) -- Read typeclass is used to convert string to
+data Experience = Beginner | Intermediate | Advanced deriving (Show, Read) -- Read typeclass is used to convert string to
+data Goal = Strength | MuscleSize | MuscleEndurance deriving (Show, Read) -- Read typeclass is used to convert string to
+data WorkoutDay = One | Two | Three | Four | Five | Six | Seven deriving (Show, Read) -- Read typeclass is used to convert string
+
 
 -- Predefined credentials for users and coaches
 validUserCredentials :: [Credentials]
@@ -25,11 +38,6 @@ validCoachCredentials =
   [ Credentials { email = "Jane@fitgym.com", password = "Jane123"}
   , Credentials { email = "Jack@fitgym.com", password = "Jack123"}
   ]
-
-data Action = GymWork | MakeAppointment deriving (Show, Read) -- Read typeclass is used to convert string to
-data Experience = Beginner | Intermediate | Advanced deriving (Show, Read) -- Read typeclass is used to convert string to
-data Goal = Strength | MuscleSize | MuscleEndurance deriving (Show, Read) -- Read typeclass is used to convert string to
-data WorkoutDay = One | Two | Three | Four | Five | Six | Seven deriving (Show, Read) -- Read typeclass is used to convert string
 
 
 -- Define a class for loginable types
@@ -125,7 +133,6 @@ performLogin =
 userJourney :: UserType -> IO ()
 userJourney userType = case userType of 
        User _  -> do
-
               action <- askQuestion :: IO Action
               -- Ask the user for their experience, goal, and workout days.
               case action of 
@@ -135,11 +142,42 @@ userJourney userType = case userType of
                             workoutDay <- askQuestion :: IO WorkoutDay
                             putStrLn ("You are a " ++ show experience ++ " user with the goal of " ++ show goal ++ ".")
                             putStrLn ("You plan to work out " ++ show workoutDay ++ " days per week.")
-                     MakeAppointment -> putStrLn "You have chosen to make an appointment."
+                     MakeAppointment -> do
+                            appointment <- makeAppointment (getUserEmail userType)
+                            putStrLn ("Your appointment with " ++ coachEmail appointment ++ " is scheduled for " ++ appointmentDate appointment ++ " at " ++ appointmentTime appointment ++ ".")
        Coach _ -> putStrLn "You are a coach."
 
+-- Function to make an appointment
+makeAppointment :: Email -> IO Appointment
+makeAppointment userEmail = do
+  putStrLn "\nChoose a coach:"
+  putStrLn "1. Jane@fitgym.com"
+  putStrLn "2. Jack@fitgym.com"
+  coachChoice <- getLine
+  let coachEmail = case coachChoice of
+        "1" -> "Jane@fitgym.com"
+        "2" -> "Jack@fitgym.com"
+        _   -> "Invalid"
+  
+  if coachEmail == "Invalid" then
+    putStrLn "Invalid choice. Please try again." >> makeAppointment userEmail
+  else do
+    putStrLn "Enter the appointment date (YYYY-MM-DD):"
+    date <- getLine
+    putStrLn "Enter the appointment time (HH:MM):"
+    time <- getLine
+    let appointment = Appointment { userEmail = userEmail, coachEmail = coachEmail, appointmentDate = date, appointmentTime = time }
+    putStrLn ("Appointment scheduled with " ++ coachEmail ++ " on " ++ date ++ " at " ++ time)
+    return appointment
+
+-- Helper function to display a prompt and get user input
 prompt :: String -> IO String
 prompt message = putStrLn message >> getLine
+
+-- Helper function to get email of the user or coach
+getUserEmail :: UserType -> Email
+getUserEmail (User (Credentials email _)) = email
+getUserEmail (Coach (Credentials email _)) = email
 
 -- Function to display the login menu and get user choice
 getChoice :: IO Int

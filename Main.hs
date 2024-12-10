@@ -24,10 +24,10 @@ class Loginable a where
 -- Implement the Loginable instance for UserType
 instance Loginable UserType where
        login (User email password) enteredEmail enteredPassword
-        | email == enteredEmail && password == enteredPassword = Just $ "Login successful. Welcome user: " ++ email ++ "!"
+        | email == enteredEmail && password == enteredPassword = Just $ "Login successful. Welcome: " ++ email ++ "!"
         | otherwise = Nothing
        login (Coach email password) enteredEmail enteredPassword
-        | email == enteredEmail && password == enteredPassword = Just $ "Login successful. Welcome coach: " ++ email ++ "!"
+        | email == enteredEmail && password == enteredPassword = Just $ "Login successful. Welcome: " ++ email ++ "!"
         | otherwise = Nothing
 
 -- Validate credentials and return the appropriate Usertype
@@ -41,28 +41,25 @@ validCredentials email password =
                      _ -> Nothing
 
 -- Function to perform login
-performLogin :: IO()
-performLogin = do
-       putStrLn "\n***************************************"
-       putStrLn "     Welcome to the FitGym System      "
-       putStrLn "***************************************"
-       putStr "Enter your email: "
-       email <- getLine
-       putStr "Enter your password: "
-       password <- getLine
+performLogin :: IO ()
+performLogin = 
+       putStrLn "\n***************************************" >>
+       putStrLn "     Welcome to the FitGym System      " >>
+       putStrLn "***************************************" >>
+       putStr "Enter your email: " >>
+       getLine >>= \email -> 
+       putStr "Enter your password: " >>
+       getLine >>= \password -> 
        -- Apply the validation function and handle the result using a Functor
        case validCredentials email password of
-              Just userType -> do
+              Just userType -> 
                      let loginMessage = case userType of
                             User _ _ -> login userType email password
                             Coach _ _ -> login userType email password
-                     case loginMessage of
-                            Just message -> putStrLn message 
+                     in case loginMessage of
+                            Just message -> putStrLn message >> userJourney userType
                             Nothing -> putStrLn "Invalid credentials. Please try again."
-                     userJourney userType
-              Nothing -> do
-                     putStrLn "Invalid credentials. Please try again."
-                     performLogin 
+              Nothing -> putStrLn "Invalid credentials. Please try again." >> performLogin 
 
 
 -- Function to ask user experience at Gym after login
@@ -99,13 +96,33 @@ askUserGoal =
                      _ -> putStrLn "Invalid choice. Please try again." >>
                             askUserGoal
 
+-- Function to ask user goal at Gym after login
+askUserWorkoutDay :: IO Int
+askUserWorkoutDay =
+       putStrLn "\nStep (3/3) " >>
+       putStrLn "How many days per week do you plan to work out (1-7)?" >>
+       putStr "Enter your choice: " >>
+       getLine >>= \days ->
+              case days of 
+                     "1" -> return 1
+                     "2" -> return 2
+                     "3" -> return 3
+                     "4" -> return 4
+                     "5" -> return 5
+                     "6" -> return 6
+                     "7" -> return 7
+                     _ -> putStrLn "Invalid choice. Please try again." >>
+                            askUserWorkoutDay
+
 -- Function to display user journey based on user type
 userJourney :: UserType -> IO ()
 userJourney userType = case userType of 
-       User _ _ -> do  
-              experience <-  askUserExperience
-              goal <- askUserGoal
-              putStrLn $ "You are a " ++ experience ++ " user with the goal of " ++ goal ++ "."
+       User _ _ -> 
+              askUserExperience >>= \experience ->
+              askUserGoal >>= \goal ->
+              askUserWorkoutDay >>= \workoutDay ->
+              putStrLn ("You are a " ++ experience ++ " user with the goal of " ++ goal ++ ".") >>
+              putStrLn ("You plan to work out " ++ show workoutDay ++ " days per week.")
        Coach _ _ -> putStrLn "You are a coach."
 
 prompt :: String -> IO String
@@ -113,23 +130,21 @@ prompt message = putStrLn message >> getLine
 
 -- Function to display the login menu and get user choice
 getChoice :: IO Int
-getChoice = do
-    putStrLn "***************************************" 
-    putStrLn "     Welcome to the FitGym System      " 
-    putStrLn "***************************************" 
-    putStrLn "1. Login" 
-    putStrLn "2. Exit" 
-    putStr "Enter your choice: " 
-    choice <- getLine
-    return (read choice :: Int)
+getChoice =
+    putStrLn "***************************************" >>
+    putStrLn "     Welcome to the FitGym System      " >>
+    putStrLn "***************************************" >>
+    putStrLn "1. Login" >>
+    putStrLn "2. Exit" >>
+    putStr "Enter your choice: " >>
+    getLine >>= \choice -> return (read choice :: Int)
 
 -- Main function
 main :: IO ()
-main = do
-    choice <- getChoice
-    case choice of
-        1 -> performLogin
-        2 -> putStrLn "Exiting the system. Goodbye!"
-        _ -> do
-            putStrLn "Invalid choice. Please try again.\n"
-            main -- Recursively call main to allow another attempt
+main = getChoice >>= \choice -> 
+       case choice of
+              1 -> performLogin
+              2 -> putStrLn "Exiting the system. Goodbye!"
+              _ -> do
+                     putStrLn "Invalid choice. Please try again.\n"
+                     main -- Recursively call main to allow another attempt

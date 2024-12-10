@@ -30,11 +30,6 @@ instance Loginable UserType where
         | email == enteredEmail && password == enteredPassword = Just $ "Login successful. Welcome coach: " ++ email ++ "!"
         | otherwise = Nothing
 
--- Function to display the Usertype 
-showUserType :: UserType -> String
-showUserType (User _ _) = "User"
-showUserType (Coach _ _) = "Coach"
-
 -- Validate credentials and return the appropriate Usertype
 validCredentials :: String -> String -> Maybe UserType
 validCredentials email password = 
@@ -46,8 +41,8 @@ validCredentials email password =
                      _ -> Nothing
 
 -- Function to perform login
-performLogin :: (String -> String -> Maybe UserType) -> IO()
-performLogin validCredentials = do
+performLogin :: IO()
+performLogin = do
        putStrLn "\n***************************************"
        putStrLn "     Welcome to the FitGym System      "
        putStrLn "***************************************"
@@ -58,12 +53,16 @@ performLogin validCredentials = do
        -- Apply the validation function and handle the result using a Functor
        case validCredentials email password of
               Just userType -> do
-                     case userType of
-                            User _ _ -> userJourney
-                            Coach _ _ -> putStrLn "You are logged in as a coach."
+                     let loginMessage = case userType of
+                            User _ _ -> login userType email password
+                            Coach _ _ -> login userType email password
+                     case loginMessage of
+                            Just message -> putStrLn message 
+                            Nothing -> putStrLn "Invalid credentials. Please try again."
+                     userJourney userType
               Nothing -> do
                      putStrLn "Invalid credentials. Please try again."
-                     performLogin validCredentials
+                     performLogin 
 
 
 -- Function to ask User experience at Gym after login
@@ -83,10 +82,16 @@ askUserExperience =
                      _ -> putStrLn "Invalid choice. Please try again." >>
                             askUserExperience
 
-userJourney :: IO ()
-userJourney = askUserExperience >>= \experience ->
-       putStrLn $ "You are a " ++ experience ++ " user."
+-- Function to display user journey based on user type
+userJourney :: UserType -> IO ()
+userJourney userType = case userType of 
+       User _ _ -> do  
+              askUserExperience >>= 
+                     \experience -> putStrLn $ "You are a " ++ experience ++ " user."
+       Coach _ _ -> putStrLn "You are a coach."
 
+prompt :: String -> IO String
+prompt message = putStrLn message >> getLine
 
 -- Function to display the login menu and get user choice
 getChoice :: IO Int
@@ -105,7 +110,7 @@ main :: IO ()
 main = do
     choice <- getChoice
     case choice of
-        1 -> performLogin validCredentials  
+        1 -> performLogin
         2 -> putStrLn "Exiting the system. Goodbye!"
         _ -> do
             putStrLn "Invalid choice. Please try again.\n"

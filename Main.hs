@@ -1,23 +1,30 @@
 import Text.Read (readMaybe)
 
--- Predefined credentials for user and coach
---User
-validUserEmail :: [String]
-validUserEmail = ["wzhao@fitgym.com", "zhengtan@fitgym.com"]
-validUserPassword :: [String]
-validUserPassword = ["wz123", "zt123"]
---Coach
-validCoachEmail :: [String]
-validCoachEmail = ["Jane@fitgym.com", "Jack@fitgym.com"]
-validCoachPassword :: [String]
-validCoachPassword = ["Jane123", "Jack123"]
-
--- Define the Email type
+-- Define the Email, Password, and Description types
 type Email = String
 type Password = String
 
--- Define the UserType data type
-data UserType = User Email Password | Coach Email Password deriving (Show)
+-- Define the Credentials data type that holds email, password, and description
+data Credentials = Credentials
+  { email :: Email
+  , password :: Password
+  } deriving (Show)
+
+-- Define the UserType data type that uses the Credentials type
+data UserType = User Credentials | Coach Credentials deriving (Show)
+
+-- Predefined credentials for users and coaches
+validUserCredentials :: [Credentials]
+validUserCredentials =
+  [ Credentials { email = "wzhao@fitgym.com", password = "wz123"}
+  , Credentials { email = "zhengtan@fitgym.com", password = "zt123"}
+  ]
+
+validCoachCredentials :: [Credentials]
+validCoachCredentials =
+  [ Credentials { email = "Jane@fitgym.com", password = "Jane123"}
+  , Credentials { email = "Jack@fitgym.com", password = "Jack123"}
+  ]
 
 -- Define the Experience, Goal and WorkoutDay data types for questions
 data Experience = Beginner | Intermediate | Advanced deriving (Show, Read) -- Read typeclass is used to convert string to
@@ -29,74 +36,59 @@ data WorkoutDay = One | Two | Three | Four | Five | Six | Seven deriving (Show, 
 class Loginable a where
     login :: a -> String -> String -> Maybe String
 
+-- Helper function to handle login logic for both users and coaches
+loginUserOrCoach :: String -> String -> String -> String -> Maybe String
+loginUserOrCoach enteredEmail enteredPassword email password
+    | email == enteredEmail && password == enteredPassword = Just $ "Login successful. Welcome: " ++ email ++ "!"
+    | otherwise = Nothing
+
 -- Implement the Loginable instance for UserType
 instance Loginable UserType where
-       login (User email password) enteredEmail enteredPassword
-        | email == enteredEmail && password == enteredPassword = Just $ "Login successful. Welcome: " ++ email ++ "!"
-        | otherwise = Nothing
-       login (Coach email password) enteredEmail enteredPassword
-        | email == enteredEmail && password == enteredPassword = Just $ "Login successful. Welcome: " ++ email ++ "!"
-        | otherwise = Nothing
+    login user enteredEmail enteredPassword =
+        case user of
+            User (Credentials email password) -> loginUserOrCoach enteredEmail enteredPassword email password
+            Coach (Credentials email password) -> loginUserOrCoach enteredEmail enteredPassword email password
+
 
 -- Define a class for gym questions
 class GymQuestion a where
        askQuestion :: IO a
 
 instance GymQuestion Experience where
-       askQuestion = 
-              putStrLn "\nStep (1/3) What is your experience at the gym?" >>
-              putStrLn "1. Beginner (Just Starting. No experience)" >>
-              putStrLn "2. Intermediate (Been at the gym. Already worked ouut for a few months)" >>
-              putStrLn "3. Advanced (Equiments are my freinds)" >>
-              putStr "Enter your choice: " >>
-              getLine >>= \experience ->
-                     case experience of
-                            "1" -> return Beginner
-                            "2" -> return Intermediate
-                            "3" -> return Advanced
-                            _ -> putStrLn "Invalid choice. Please try again." >> askQuestion
-                            
+    askQuestion = askGymQuestion "What is your experience at the gym?" 
+                        [("1", Beginner), ("2", Intermediate), ("3", Advanced)]
 
 instance GymQuestion Goal where
-       askQuestion =
-              putStrLn "\nStep (2/3) What is your goal at the gym?" >>
-              putStrLn "1. Strength (Increase Strength)" >>
-              putStrLn "2. Muscle Size (Hypertrophy)" >>
-              putStrLn "3. Muscle Endurance" >>
-              putStr "Enter your choice: " >>
-              getLine >>= \goal ->
-                     case goal of
-                            "1" -> return Strength
-                            "2" -> return MuscleSize
-                            "3" -> return MuscleEndurance
-                            _ -> putStrLn "Invalid choice. Please try again." >> askQuestion
+    askQuestion = askGymQuestion "What is your goal at the gym?" 
+                        [("1", Strength), ("2", MuscleSize), ("3", MuscleEndurance)]
 
--- Instance for WorkoutDay
 instance GymQuestion WorkoutDay where
-       askQuestion =
-              putStrLn "\nStep (3/3) How many days per week do you plan to work out (1-7)?" >>
-              putStr "Enter your choice: " >>
-              getLine >>= \days ->
-                     case days of
-                            "1" -> return One
-                            "2" -> return Two
-                            "3" -> return Three
-                            "4" -> return Four
-                            "5" -> return Five
-                            "6" -> return Six
-                            "7" -> return Seven
-                            _ -> putStrLn "Invalid choice. Please try again." >> askQuestion
+    askQuestion = askGymQuestion "How many days per week do you plan to work out (1-7)?" 
+                        [("1", One), ("2", Two), ("3", Three), ("4", Four), 
+                         ("5", Five), ("6", Six), ("7", Seven)]
+
+-- Generalized askQuestion function
+askGymQuestion :: String -> [(String, a)] -> IO a
+askGymQuestion prompt options = do
+    putStrLn ("\nStep: " ++ prompt)
+    mapM_ (putStrLn . fst) options
+    putStr "Enter your choice: "
+    choice <- getLine
+    case lookup choice options of
+        Just result -> return result
+        Nothing -> putStrLn "Invalid choice. Please try again." >> askGymQuestion prompt options
+
                             
-                            
--- Validate credentials and return the appropriate Usertype
+-- Validate credentials and return the appropriate UserType
 validCredentials :: String -> String -> Maybe UserType
-validCredentials email password = 
-       -- Zip the email and password lists and lookup the email
-       case lookup email (zip validUserEmail validUserPassword) of
-              Just correctPassword | correctPassword == password ->  Just (User email password)  -- Return User type for user
-              _ -> case lookup email (zip validCoachEmail validCoachPassword) of
-                     Just correctPassword | correctPassword == password -> Just (Coach email password)  -- Return Coach type for coach 
-                     _ -> Nothing
+validCredentials enteredEmail enteredPassword = 
+    -- Check if the email and password match valid user credentials
+    case lookup enteredEmail (map (\(Credentials e p) -> (e, p)) validUserCredentials) of
+        Just correctPassword | correctPassword == enteredPassword -> Just (User (Credentials enteredEmail enteredPassword))
+        _ -> case lookup enteredEmail (map (\(Credentials e p) -> (e, p)) validCoachCredentials) of
+               Just correctPassword | correctPassword == enteredPassword -> Just (Coach (Credentials enteredEmail enteredPassword))
+               _ -> Nothing
+
 
 -- Function to perform login
 performLogin :: IO ()
@@ -111,9 +103,7 @@ performLogin =
        -- Apply the validation function and handle the result using a Functor
        case validCredentials email password of
               Just userType -> 
-                     let loginMessage = case userType of
-                            User _ _ -> login userType email password
-                            Coach _ _ -> login userType email password
+                     let loginMessage = login userType email password
                      in case loginMessage of
                             Just message -> putStrLn message >> userJourney userType
                             Nothing -> putStrLn "Invalid credentials. Please try again."
@@ -122,14 +112,14 @@ performLogin =
 -- Function to display user journey based on user type
 userJourney :: UserType -> IO ()
 userJourney userType = case userType of 
-       User _ _ -> do
+       User _  -> do
               -- Ask the user for their experience, goal, and workout days.
               experience <- askQuestion :: IO Experience
               goal <- askQuestion :: IO Goal
               workoutDay <- askQuestion :: IO WorkoutDay
               putStrLn ("You are a " ++ show experience ++ " user with the goal of " ++ show goal ++ ".")
               putStrLn ("You plan to work out " ++ show workoutDay ++ " days per week.")
-       Coach _ _ -> putStrLn "You are a coach."
+       Coach _ -> putStrLn "You are a coach."
 
 prompt :: String -> IO String
 prompt message = putStrLn message >> getLine

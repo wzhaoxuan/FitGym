@@ -1,13 +1,15 @@
 -- Predefined credentials for user and coach
+--User
 validUserEmail :: [String]
 validUserEmail = ["wzhao@fitgym.com", "zhengtan@fitgym.com"]
 validUserPassword :: [String]
 validUserPassword = ["wz123", "zt123"]
-
+--Coach
 validCoachEmail :: [String]
 validCoachEmail = ["Jane@fitgym.com", "Jack@fitgym.com"]
 validCoachPassword :: [String]
 validCoachPassword = ["Jane123", "Jack123"]
+
 -- Define the Email type
 type Email = String
 type Password = String
@@ -41,7 +43,7 @@ performLogin validCredentials = do
        password <- getLine
        -- Apply the validation function and handle the result using a Functor
        case validCredentials email password of
-              Just successLogin -> putStrLn successLogin
+              Just successLogin -> putStrLn successLogin >> userJourney
               Nothing -> do
                      putStrLn "Invalid credentials. Please try again."
                      performLogin validCredentials
@@ -62,6 +64,28 @@ validCredentials email password =
                      Just correctPassword | correctPassword == password ->
                             Just (Coach email password) >>= \coach -> login coach email password -- Return Coach type for coach 
                      _ -> Nothing
+
+-- Function to ask User experience at Gym after login
+askUserExperience :: IO String
+askUserExperience =
+       putStrLn "\nStep (1/4) " >>
+       putStrLn "What is your experience at the gym?" >>
+       putStrLn "1. Beginner (Just Starting. No experience)" >>
+       putStrLn "2. Intermediate (Been at the gym. Already worked ouut for a few months)" >>
+       putStrLn "3. Advanced (Equiments are my freinds)" >>
+       putStr "Enter your choice: " >>
+       getLine >>= \choice ->
+              case choice of 
+                     "1" -> return "Beginner"
+                     "2" -> return "Intermediate"
+                     "3" -> return "Advanced"
+                     _ -> putStrLn "Invalid choice. Please try again." >>
+                            askUserExperience
+
+userJourney :: IO ()
+userJourney = askUserExperience >>= \experience ->
+       putStrLn $ "You are a " ++ experience ++ " user."
+
 
 -- Function to display the login menu and get user choice
 getChoice :: IO Int

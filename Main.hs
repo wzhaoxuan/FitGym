@@ -1,3 +1,5 @@
+import Text.Read (readMaybe)
+
 -- Predefined credentials for user and coach
 --User
 validUserEmail :: [String]
@@ -17,6 +19,12 @@ type Password = String
 -- Define the UserType data type
 data UserType = User Email Password | Coach Email Password deriving (Show)
 
+-- Define the Experience, Goal and WorkoutDay data types for questions
+data Experience = Beginner | Intermediate | Advanced deriving (Show, Read) -- Read typeclass is used to convert string to
+data Goal = Strength | MuscleSize | MuscleEndurance deriving (Show, Read) -- Read typeclass is used to convert string to
+data WorkoutDay = One | Two | Three | Four | Five | Six | Seven deriving (Show, Read) -- Read typeclass is used to convert string
+
+
 -- Define a class for loginable types
 class Loginable a where
     login :: a -> String -> String -> Maybe String
@@ -30,6 +38,56 @@ instance Loginable UserType where
         | email == enteredEmail && password == enteredPassword = Just $ "Login successful. Welcome: " ++ email ++ "!"
         | otherwise = Nothing
 
+-- Define a class for gym questions
+class GymQuestion a where
+       askQuestion :: IO a
+
+instance GymQuestion Experience where
+       askQuestion = 
+              putStrLn "\nStep (1/3) What is your experience at the gym?" >>
+              putStrLn "1. Beginner (Just Starting. No experience)" >>
+              putStrLn "2. Intermediate (Been at the gym. Already worked ouut for a few months)" >>
+              putStrLn "3. Advanced (Equiments are my freinds)" >>
+              putStr "Enter your choice: " >>
+              getLine >>= \experience ->
+                     case experience of
+                            "1" -> return Beginner
+                            "2" -> return Intermediate
+                            "3" -> return Advanced
+                            _ -> putStrLn "Invalid choice. Please try again." >> askQuestion
+                            
+
+instance GymQuestion Goal where
+       askQuestion =
+              putStrLn "\nStep (2/3) What is your goal at the gym?" >>
+              putStrLn "1. Strength (Increase Strength)" >>
+              putStrLn "2. Muscle Size (Hypertrophy)" >>
+              putStrLn "3. Muscle Endurance" >>
+              putStr "Enter your choice: " >>
+              getLine >>= \goal ->
+                     case goal of
+                            "1" -> return Strength
+                            "2" -> return MuscleSize
+                            "3" -> return MuscleEndurance
+                            _ -> putStrLn "Invalid choice. Please try again." >> askQuestion
+
+-- Instance for WorkoutDay
+instance GymQuestion WorkoutDay where
+       askQuestion =
+              putStrLn "\nStep (3/3) How many days per week do you plan to work out (1-7)?" >>
+              putStr "Enter your choice: " >>
+              getLine >>= \days ->
+                     case days of
+                            "1" -> return One
+                            "2" -> return Two
+                            "3" -> return Three
+                            "4" -> return Four
+                            "5" -> return Five
+                            "6" -> return Six
+                            "7" -> return Seven
+                            _ -> putStrLn "Invalid choice. Please try again." >> askQuestion
+                            
+                            
 -- Validate credentials and return the appropriate Usertype
 validCredentials :: String -> String -> Maybe UserType
 validCredentials email password = 
@@ -61,67 +119,15 @@ performLogin =
                             Nothing -> putStrLn "Invalid credentials. Please try again."
               Nothing -> putStrLn "Invalid credentials. Please try again." >> performLogin 
 
-
--- Function to ask user experience at Gym after login
-askUserExperience :: IO String
-askUserExperience =
-       putStrLn "\nStep (1/3) " >>
-       putStrLn "What is your experience at the gym?" >>
-       putStrLn "1. Beginner (Just Starting. No experience)" >>
-       putStrLn "2. Intermediate (Been at the gym. Already worked ouut for a few months)" >>
-       putStrLn "3. Advanced (Equiments are my freinds)" >>
-       putStr "Enter your choice: " >>
-       getLine >>= \experience ->
-              case experience of 
-                     "1" -> return "Beginner"
-                     "2" -> return "Intermediate"
-                     "3" -> return "Advanced"
-                     _ -> putStrLn "Invalid choice. Please try again." >>
-                            askUserExperience
-
--- Function to ask user goal at Gym after login
-askUserGoal :: IO String
-askUserGoal =
-       putStrLn "\nStep (2/3) " >>
-       putStrLn "What is your goal at the gym?" >>
-       putStrLn "1. Strength (Increase Strength)" >>
-       putStrLn "2. Muscle Size (Hypertrophy)" >>
-       putStrLn "3. Muscle Endurance" >>
-       putStr "Enter your choice: " >>
-       getLine >>= \goal ->
-              case goal of 
-                     "1" -> return "Strength"
-                     "2" -> return "Muscle Size (Hypertrophy)"
-                     "3" -> return "Muscle Endurance"
-                     _ -> putStrLn "Invalid choice. Please try again." >>
-                            askUserGoal
-
--- Function to ask user goal at Gym after login
-askUserWorkoutDay :: IO Int
-askUserWorkoutDay =
-       putStrLn "\nStep (3/3) " >>
-       putStrLn "How many days per week do you plan to work out (1-7)?" >>
-       putStr "Enter your choice: " >>
-       getLine >>= \days ->
-              case days of 
-                     "1" -> return 1
-                     "2" -> return 2
-                     "3" -> return 3
-                     "4" -> return 4
-                     "5" -> return 5
-                     "6" -> return 6
-                     "7" -> return 7
-                     _ -> putStrLn "Invalid choice. Please try again." >>
-                            askUserWorkoutDay
-
 -- Function to display user journey based on user type
 userJourney :: UserType -> IO ()
 userJourney userType = case userType of 
-       User _ _ -> 
-              askUserExperience >>= \experience ->
-              askUserGoal >>= \goal ->
-              askUserWorkoutDay >>= \workoutDay ->
-              putStrLn ("You are a " ++ experience ++ " user with the goal of " ++ goal ++ ".") >>
+       User _ _ -> do
+              -- Ask the user for their experience, goal, and workout days.
+              experience <- askQuestion :: IO Experience
+              goal <- askQuestion :: IO Goal
+              workoutDay <- askQuestion :: IO WorkoutDay
+              putStrLn ("You are a " ++ show experience ++ " user with the goal of " ++ show goal ++ ".")
               putStrLn ("You plan to work out " ++ show workoutDay ++ " days per week.")
        Coach _ _ -> putStrLn "You are a coach."
 
@@ -137,7 +143,13 @@ getChoice =
     putStrLn "1. Login" >>
     putStrLn "2. Exit" >>
     putStr "Enter your choice: " >>
-    getLine >>= \choice -> return (read choice :: Int)
+    getLine >>= \choice -> 
+       case readMaybe choice :: Maybe Int of
+              Just input -> 
+                     return input 
+              Nothing -> do
+                     putStrLn "Invalid choice. Please enter a number.\n"
+                     getChoice
 
 -- Main function
 main :: IO ()

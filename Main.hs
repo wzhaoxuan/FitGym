@@ -26,7 +26,7 @@ validCoachCredentials =
   , Credentials { email = "Jack@fitgym.com", password = "Jack123"}
   ]
 
--- Define the Experience, Goal and WorkoutDay data types for questions
+data Action = GymWork | MakeAppointment deriving (Show, Read) -- Read typeclass is used to convert string to
 data Experience = Beginner | Intermediate | Advanced deriving (Show, Read) -- Read typeclass is used to convert string to
 data Goal = Strength | MuscleSize | MuscleEndurance deriving (Show, Read) -- Read typeclass is used to convert string to
 data WorkoutDay = One | Two | Three | Four | Five | Six | Seven deriving (Show, Read) -- Read typeclass is used to convert string
@@ -36,12 +36,6 @@ data WorkoutDay = One | Two | Three | Four | Five | Six | Seven deriving (Show, 
 class Loginable a where
     login :: a -> String -> String -> Maybe String
 
--- Helper function to handle login logic for both users and coaches
-loginUserOrCoach :: String -> String -> String -> String -> Maybe String
-loginUserOrCoach enteredEmail enteredPassword email password
-    | email == enteredEmail && password == enteredPassword = Just $ "Login successful. Welcome: " ++ email ++ "!"
-    | otherwise = Nothing
-
 -- Implement the Loginable instance for UserType
 instance Loginable UserType where
     login user enteredEmail enteredPassword =
@@ -49,10 +43,21 @@ instance Loginable UserType where
             User (Credentials email password) -> loginUserOrCoach enteredEmail enteredPassword email password
             Coach (Credentials email password) -> loginUserOrCoach enteredEmail enteredPassword email password
 
+-- Helper function to handle login logic for both users and coaches
+loginUserOrCoach :: String -> String -> String -> String -> Maybe String
+loginUserOrCoach enteredEmail enteredPassword email password
+    | email == enteredEmail && password == enteredPassword = Just $ "Login successful. Welcome: " ++ email ++ "!"
+    | otherwise = Nothing
 
 -- Define a class for gym questions
 class GymQuestion a where
        askQuestion :: IO a
+
+instance GymQuestion Action where
+    askQuestion = askGymQuestion "What would you like to do?" 
+                        [("1", GymWork, "GymWork"),
+                         ("2", MakeAppointment, "MakeAppointment")
+                         ]
 
 instance GymQuestion Experience where
     askQuestion = askGymQuestion "What is your experience at the gym?" 
@@ -79,15 +84,13 @@ instance GymQuestion WorkoutDay where
 -- Generalized askQuestion function
 askGymQuestion :: String -> [(String, a, String)] -> IO a
 askGymQuestion prompt options = do
-    putStrLn ("\nStep: " ++ prompt)
+    putStrLn ("\n" ++ prompt)
     mapM_ (\(label, _, description) -> putStrLn (label ++ ": " ++ description)) options
     putStr "Enter your choice: "
     choice <- getLine
     case lookup choice (map (\(label, val, _) -> (label, val)) options) of
         Just result -> return result
         Nothing -> putStrLn "Invalid choice. Please try again." >> askGymQuestion prompt options
-
-
                             
 -- Validate credentials and return the appropriate UserType
 validCredentials :: String -> String -> Maybe UserType
@@ -98,7 +101,6 @@ validCredentials enteredEmail enteredPassword =
         _ -> case lookup enteredEmail (map (\(Credentials e p) -> (e, p)) validCoachCredentials) of
                Just correctPassword | correctPassword == enteredPassword -> Just (Coach (Credentials enteredEmail enteredPassword))
                _ -> Nothing
-
 
 -- Function to perform login
 performLogin :: IO ()
@@ -123,12 +125,17 @@ performLogin =
 userJourney :: UserType -> IO ()
 userJourney userType = case userType of 
        User _  -> do
+
+              action <- askQuestion :: IO Action
               -- Ask the user for their experience, goal, and workout days.
-              experience <- askQuestion :: IO Experience
-              goal <- askQuestion :: IO Goal
-              workoutDay <- askQuestion :: IO WorkoutDay
-              putStrLn ("You are a " ++ show experience ++ " user with the goal of " ++ show goal ++ ".")
-              putStrLn ("You plan to work out " ++ show workoutDay ++ " days per week.")
+              case action of 
+                     GymWork -> do
+                            experience <- askQuestion :: IO Experience
+                            goal <- askQuestion :: IO Goal
+                            workoutDay <- askQuestion :: IO WorkoutDay
+                            putStrLn ("You are a " ++ show experience ++ " user with the goal of " ++ show goal ++ ".")
+                            putStrLn ("You plan to work out " ++ show workoutDay ++ " days per week.")
+                     MakeAppointment -> putStrLn "You have chosen to make an appointment."
        Coach _ -> putStrLn "You are a coach."
 
 prompt :: String -> IO String

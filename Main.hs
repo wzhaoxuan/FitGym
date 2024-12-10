@@ -65,10 +65,10 @@ performLogin = do
                      performLogin 
 
 
--- Function to ask User experience at Gym after login
+-- Function to ask user experience at Gym after login
 askUserExperience :: IO String
 askUserExperience =
-       putStrLn "\nStep (1/4) " >>
+       putStrLn "\nStep (1/3) " >>
        putStrLn "What is your experience at the gym?" >>
        putStrLn "1. Beginner (Just Starting. No experience)" >>
        putStrLn "2. Intermediate (Been at the gym. Already worked ouut for a few months)" >>
@@ -82,12 +82,30 @@ askUserExperience =
                      _ -> putStrLn "Invalid choice. Please try again." >>
                             askUserExperience
 
+-- Function to ask user goal at Gym after login
+askUserGoal :: IO String
+askUserGoal =
+       putStrLn "\nStep (2/3) " >>
+       putStrLn "What is your goal at the gym?" >>
+       putStrLn "1. Strength (Increase Strength)" >>
+       putStrLn "2. Muscle Size (Hypertrophy)" >>
+       putStrLn "3. Muscle Endurance" >>
+       putStr "Enter your choice: " >>
+       getLine >>= \goal ->
+              case goal of 
+                     "1" -> return "Strength"
+                     "2" -> return "Muscle Size (Hypertrophy)"
+                     "3" -> return "Muscle Endurance"
+                     _ -> putStrLn "Invalid choice. Please try again." >>
+                            askUserGoal
+
 -- Function to display user journey based on user type
 userJourney :: UserType -> IO ()
 userJourney userType = case userType of 
        User _ _ -> do  
-              askUserExperience >>= 
-                     \experience -> putStrLn $ "You are a " ++ experience ++ " user."
+              experience <-  askUserExperience
+              goal <- askUserGoal
+              putStrLn $ "You are a " ++ experience ++ " user with the goal of " ++ goal ++ "."
        Coach _ _ -> putStrLn "You are a coach."
 
 prompt :: String -> IO String

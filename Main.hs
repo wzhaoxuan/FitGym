@@ -56,27 +56,37 @@ class GymQuestion a where
 
 instance GymQuestion Experience where
     askQuestion = askGymQuestion "What is your experience at the gym?" 
-                        [("1", Beginner), ("2", Intermediate), ("3", Advanced)]
+                        [("1", Beginner, "Beginner"),
+                         ("2", Intermediate, "Intermediate"),
+                         ("3", Advanced, "Advanced")]
 
 instance GymQuestion Goal where
     askQuestion = askGymQuestion "What is your goal at the gym?" 
-                        [("1", Strength), ("2", MuscleSize), ("3", MuscleEndurance)]
+                        [("1", Strength, "Strength: Focus on building muscle strength"),
+                         ("2", MuscleSize, "Muscle Size: Focus on hypertrophy to grow muscle mass"),
+                         ("3", MuscleEndurance, "Muscle Endurance: Focus on endurance to sustain longer workouts")]
 
 instance GymQuestion WorkoutDay where
     askQuestion = askGymQuestion "How many days per week do you plan to work out (1-7)?" 
-                        [("1", One), ("2", Two), ("3", Three), ("4", Four), 
-                         ("5", Five), ("6", Six), ("7", Seven)]
+                        [("1", One, "1 day per week"),
+                         ("2", Two, "2 days per week"),
+                         ("3", Three, "3 days per week"),
+                         ("4", Four, "4 days per week"),
+                         ("5", Five, "5 days per week"),
+                         ("6", Six, "6 days per week"),
+                         ("7", Seven, "7 days per week")]
 
 -- Generalized askQuestion function
-askGymQuestion :: String -> [(String, a)] -> IO a
+askGymQuestion :: String -> [(String, a, String)] -> IO a
 askGymQuestion prompt options = do
     putStrLn ("\nStep: " ++ prompt)
-    mapM_ (putStrLn . fst) options
+    mapM_ (\(label, _, description) -> putStrLn (label ++ ": " ++ description)) options
     putStr "Enter your choice: "
     choice <- getLine
-    case lookup choice options of
+    case lookup choice (map (\(label, val, _) -> (label, val)) options) of
         Just result -> return result
         Nothing -> putStrLn "Invalid choice. Please try again." >> askGymQuestion prompt options
+
 
                             
 -- Validate credentials and return the appropriate UserType

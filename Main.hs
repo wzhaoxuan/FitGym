@@ -160,9 +160,6 @@ makeAppointment userEmail coachAvailability = do
         , appointmentDate = selectedDate
         , appointmentTime = selectedTime
         }
-  putStrLn ("Appointment scheduled with " ++ selectedCoachEmail ++ 
-            " on " ++ selectedDate ++ 
-            " at " ++ selectedTime)
   return appointment
 
 -- Helper function to get email of the user or coach
@@ -178,16 +175,14 @@ askGymQuestion prompt options = do
     putStr "Enter your choice: "
     choice <- getLine
     putStrLn "\n***************************************"
-    -- Find the selected action and display its description
     case lookup choice (map (\(label, _, description) -> (label, description)) options) of
-        Just description ->
-            -- Display the selected action's description
-            putStrLn ("             " ++ description ++ "            ") >>
-            putStrLn "***************************************" 
-            -- Return the corresponding Action
+        Just description -> putStrLn ("             " ++ description ++ "            ") >>
+                            putStrLn "***************************************"
+        Nothing -> putStrLn "Invalid choice. Please try again." 
     case lookup choice (map (\(label, val, _) -> (label, val)) options) of
         Just result -> return result
         Nothing -> putStrLn "Invalid choice. Please try again." >> askGymQuestion prompt options
+
 
 -- Helper function to display a prompt and get user input
 prompt :: String -> IO String
@@ -242,9 +237,13 @@ userJourney userType = case userType of
                      MakeAppointment -> do
                       let userEmail = getUserEmail userType
                       appointment <- makeAppointment userEmail coachAvailability
-                      putStrLn ("Your appointment with " ++ coachEmail appointment ++ 
-                          " is scheduled for " ++ appointmentDate appointment ++ 
-                          " at " ++ appointmentTime appointment ++ ".")
+                      putStrLn "\n***************************************"
+                      putStrLn "         Appointment Scheduled          " 
+                      putStrLn "***************************************"
+                      putStrLn ("Coach: " ++ coachEmail appointment ++ 
+                          " \nDate: " ++ appointmentDate appointment ++ 
+                          " \nTime: " ++ appointmentTime appointment)
+                      putStrLn "***************************************"
        Coach _ -> putStrLn "You are a coach."
 
 

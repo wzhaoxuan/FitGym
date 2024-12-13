@@ -74,7 +74,7 @@ instance Loginable UserType where
 -- Helper function to handle login logic for both users and coaches
 loginUserOrCoach :: String -> String -> String -> String -> Maybe String
 loginUserOrCoach enteredEmail enteredPassword email password
-    | email == enteredEmail && password == enteredPassword = Just $ "Login successful. Welcome: " ++ email ++ "!"
+    | email == enteredEmail && password == enteredPassword = Just $ "\nLogin successful. Welcome: " ++ email ++ "!"
     | otherwise = Nothing
 
 -- Define a class for gym questions
@@ -114,12 +114,13 @@ selectOption :: String -> [String] -> IO (Maybe String)
 selectOption prompt options = do
   putStrLn prompt
   mapM_ (\(i, option) -> putStrLn (show i ++ ". " ++ option)) (zip [1..] options)
+  putStr "Enter your choice: "
   choice <- getLine
   return $ case reads choice of
     [(index, "")] | index > 0 && index <= length options -> Just (options !! (index - 1))
     _ -> Nothing
 
--- Function to display an error message and retry the selection
+-- Helper function to retry on invalid input
 retryOnInvalid :: IO (Maybe a) -> String -> IO a
 retryOnInvalid action errorMessage = do
   result <- action
@@ -129,12 +130,13 @@ retryOnInvalid action errorMessage = do
       putStrLn errorMessage
       retryOnInvalid action errorMessage
 
-makeAppointment :: Email -> IO Appointment
-makeAppointment userEmail = do
+-- Main function to make an appointment
+makeAppointment :: String -> [Availability] -> IO Appointment
+makeAppointment userEmail coachAvailability = do
   -- Step 1: Select a coach
   let coachEmails = map emailCoach coachAvailability
   selectedCoachEmail <- retryOnInvalid
-    (selectOption "\nChoose a coach:" coachEmails )
+    (selectOption "Choose a coach:" coachEmails)
     "Invalid coach selection. Please try again."
 
   -- Step 2: Find the selected coach's availability
@@ -163,8 +165,6 @@ makeAppointment userEmail = do
             " at " ++ selectedTime)
   return appointment
 
-
-
 -- Helper function to get email of the user or coach
 getUserEmail :: UserType -> Email
 getUserEmail (User (Credentials email _)) = email
@@ -173,10 +173,18 @@ getUserEmail (Coach (Credentials email _)) = email
 -- Generalized askQuestion function
 askGymQuestion :: String -> [(String, a, String)] -> IO a
 askGymQuestion prompt options = do
-    putStrLn ("\n" ++ prompt)
+    putStrLn prompt
     mapM_ (\(label, _, description) -> putStrLn (label ++ ": " ++ description)) options
     putStr "Enter your choice: "
     choice <- getLine
+    putStrLn "\n***************************************"
+    -- Find the selected action and display its description
+    case lookup choice (map (\(label, _, description) -> (label, description)) options) of
+        Just description ->
+            -- Display the selected action's description
+            putStrLn ("             " ++ description ++ "            ") >>
+            putStrLn "***************************************" 
+            -- Return the corresponding Action
     case lookup choice (map (\(label, val, _) -> (label, val)) options) of
         Just result -> return result
         Nothing -> putStrLn "Invalid choice. Please try again." >> askGymQuestion prompt options
@@ -219,6 +227,9 @@ performLogin =
 userJourney :: UserType -> IO ()
 userJourney userType = case userType of 
        User _  -> do
+              putStrLn "\n***************************************"
+              putStrLn "                FitGym                  " 
+              putStrLn "***************************************"
               action <- askQuestion :: IO Action
               -- Ask the user for their experience, goal, and workout days.
               case action of 
@@ -229,8 +240,11 @@ userJourney userType = case userType of
                             putStrLn ("You are a " ++ show experience ++ " user with the goal of " ++ show goal ++ ".")
                             putStrLn ("You plan to work out " ++ show workoutDay ++ " days per week.")
                      MakeAppointment -> do
-                            appointment <- makeAppointment (getUserEmail userType)
-                            putStrLn ("Your appointment with " ++ coachEmail appointment ++ " is scheduled for " ++ appointmentDate appointment ++ " at " ++ appointmentTime appointment ++ ".")
+                      let userEmail = getUserEmail userType
+                      appointment <- makeAppointment userEmail coachAvailability
+                      putStrLn ("Your appointment with " ++ coachEmail appointment ++ 
+                          " is scheduled for " ++ appointmentDate appointment ++ 
+                          " at " ++ appointmentTime appointment ++ ".")
        Coach _ -> putStrLn "You are a coach."
 
 

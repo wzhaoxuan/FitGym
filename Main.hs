@@ -1,4 +1,6 @@
 import Text.Read (readMaybe)
+import Data.Maybe (fromMaybe)
+import Data.List (find)
 
 -- Define the Email, Password, and Description types
 type Email = String
@@ -18,6 +20,13 @@ data Appointment = Appointment
   , appointmentTime :: String
   } deriving (Show)
 
+data Availability = Availability
+  { emailCoach :: Email
+  , day :: [String]
+  , time :: [(String, [String])] -- (day, [time])
+  } deriving (Show)
+
+
 -- Define the UserType data type that uses the Credentials type
 data UserType = User Credentials | Coach Credentials deriving (Show)
 data Action = GymWork | MakeAppointment deriving (Show, Read) -- Read typeclass is used to convert string to
@@ -29,16 +38,27 @@ data WorkoutDay = One | Two | Three | Four | Five | Six | Seven deriving (Show, 
 -- Predefined credentials for users and coaches
 validUserCredentials :: [Credentials]
 validUserCredentials =
-  [ Credentials { email = "wzhao@fitgym.com", password = "wz123"}
-  , Credentials { email = "zhengtan@fitgym.com", password = "zt123"}
+  [ Credentials { email = "wzhao@fitgym.com", password = "wz123"},
+    Credentials { email = "zhengtan@fitgym.com", password = "zt123"}
   ]
 
 validCoachCredentials :: [Credentials]
 validCoachCredentials =
-  [ Credentials { email = "Jane@fitgym.com", password = "Jane123"}
-  , Credentials { email = "Jack@fitgym.com", password = "Jack123"}
+  [ Credentials { email = "Jane@fitgym.com", password = "Jane123"},
+    Credentials { email = "Jack@fitgym.com", password = "Jack123"}
   ]
 
+coachAvailability :: [Availability]
+coachAvailability = [
+       Availability { emailCoach = "Jane@fitgym.com", 
+       day = ["Monday", "Wednesday", "Friday"], 
+       time = [("Monday", ["10:00", "11:00"]), ("Wednesday", ["10:00", "11:00"]), ("Friday", ["10:00", "11:00"])]
+       },
+
+       Availability { emailCoach = "Jack@fitgym.com", 
+       day = ["Monday", "Tuesday", "Thursday"], 
+       time = [("Monday", ["10:00", "11:00"]), ("Tuesday", ["12:00", "2:00"]), ("Thursday", ["10:00", "11:00"])]
+       }]
 
 -- Define a class for loginable types
 class Loginable a where
@@ -58,28 +78,28 @@ loginUserOrCoach enteredEmail enteredPassword email password
     | otherwise = Nothing
 
 -- Define a class for gym questions
-class GymQuestion a where
+class Question a where
        askQuestion :: IO a
 
-instance GymQuestion Action where
+instance Question Action where
     askQuestion = askGymQuestion "What would you like to do?" 
                         [("1", GymWork, "GymWork"),
                          ("2", MakeAppointment, "MakeAppointment")
                          ]
 
-instance GymQuestion Experience where
+instance Question Experience where
     askQuestion = askGymQuestion "What is your experience at the gym?" 
                         [("1", Beginner, "Beginner"),
                          ("2", Intermediate, "Intermediate"),
                          ("3", Advanced, "Advanced")]
 
-instance GymQuestion Goal where
+instance Question Goal where
     askQuestion = askGymQuestion "What is your goal at the gym?" 
                         [("1", Strength, "Strength: Focus on building muscle strength"),
                          ("2", MuscleSize, "Muscle Size: Focus on hypertrophy to grow muscle mass"),
                          ("3", MuscleEndurance, "Muscle Endurance: Focus on endurance to sustain longer workouts")]
 
-instance GymQuestion WorkoutDay where
+instance Question WorkoutDay where
     askQuestion = askGymQuestion "How many days per week do you plan to work out (1-7)?" 
                         [("1", One, "1 day per week"),
                          ("2", Two, "2 days per week"),
@@ -88,6 +108,67 @@ instance GymQuestion WorkoutDay where
                          ("5", Five, "5 days per week"),
                          ("6", Six, "6 days per week"),
                          ("7", Seven, "7 days per week")]
+
+-- Helper function to display and select an option from a list
+selectOption :: String -> [String] -> IO (Maybe String)
+selectOption prompt options = do
+  putStrLn prompt
+  mapM_ (\(i, option) -> putStrLn (show i ++ ". " ++ option)) (zip [1..] options)
+  choice <- getLine
+  return $ case reads choice of
+    [(index, "")] | index > 0 && index <= length options -> Just (options !! (index - 1))
+    _ -> Nothing
+
+-- Function to display an error message and retry the selection
+retryOnInvalid :: IO (Maybe a) -> String -> IO a
+retryOnInvalid action errorMessage = do
+  result <- action
+  case result of
+    Just value -> return value
+    Nothing -> do
+      putStrLn errorMessage
+      retryOnInvalid action errorMessage
+
+makeAppointment :: Email -> IO Appointment
+makeAppointment userEmail = do
+  -- Step 1: Select a coach
+  let coachEmails = map emailCoach coachAvailability
+  selectedCoachEmail <- retryOnInvalid
+    (selectOption "\nChoose a coach:" coachEmails )
+    "Invalid coach selection. Please try again."
+
+  -- Step 2: Find the selected coach's availability
+  let Just selectedCoachAvailability = find (\coach -> emailCoach coach == selectedCoachEmail) coachAvailability
+
+  -- Step 3: Select an available date
+  selectedDate <- retryOnInvalid
+    (selectOption "\nAvailable days:" (day selectedCoachAvailability))
+    "Invalid date selection. Please try again."
+
+  -- Step 4: Select an available time for the chosen date
+  let timesForDate = fromMaybe [] $ lookup selectedDate (time selectedCoachAvailability)
+  selectedTime <- retryOnInvalid
+    (selectOption "\nAvailable times:" timesForDate)
+    "Invalid time selection. Please try again."
+
+  -- Step 5: Create and return the appointment
+  let appointment = Appointment
+        { userEmail = userEmail
+        , coachEmail = selectedCoachEmail
+        , appointmentDate = selectedDate
+        , appointmentTime = selectedTime
+        }
+  putStrLn ("Appointment scheduled with " ++ selectedCoachEmail ++ 
+            " on " ++ selectedDate ++ 
+            " at " ++ selectedTime)
+  return appointment
+
+
+
+-- Helper function to get email of the user or coach
+getUserEmail :: UserType -> Email
+getUserEmail (User (Credentials email _)) = email
+getUserEmail (Coach (Credentials email _)) = email
 
 -- Generalized askQuestion function
 askGymQuestion :: String -> [(String, a, String)] -> IO a
@@ -99,7 +180,12 @@ askGymQuestion prompt options = do
     case lookup choice (map (\(label, val, _) -> (label, val)) options) of
         Just result -> return result
         Nothing -> putStrLn "Invalid choice. Please try again." >> askGymQuestion prompt options
-                            
+
+-- Helper function to display a prompt and get user input
+prompt :: String -> IO String
+prompt message = putStrLn message >> getLine
+
+ 
 -- Validate credentials and return the appropriate UserType
 validCredentials :: String -> String -> Maybe UserType
 validCredentials enteredEmail enteredPassword = 
@@ -147,37 +233,7 @@ userJourney userType = case userType of
                             putStrLn ("Your appointment with " ++ coachEmail appointment ++ " is scheduled for " ++ appointmentDate appointment ++ " at " ++ appointmentTime appointment ++ ".")
        Coach _ -> putStrLn "You are a coach."
 
--- Function to make an appointment
-makeAppointment :: Email -> IO Appointment
-makeAppointment userEmail = do
-  putStrLn "\nChoose a coach:"
-  putStrLn "1. Jane@fitgym.com"
-  putStrLn "2. Jack@fitgym.com"
-  coachChoice <- getLine
-  let coachEmail = case coachChoice of
-        "1" -> "Jane@fitgym.com"
-        "2" -> "Jack@fitgym.com"
-        _   -> "Invalid"
-  
-  if coachEmail == "Invalid" then
-    putStrLn "Invalid choice. Please try again." >> makeAppointment userEmail
-  else do
-    putStrLn "Enter the appointment date (YYYY-MM-DD):"
-    date <- getLine
-    putStrLn "Enter the appointment time (HH:MM):"
-    time <- getLine
-    let appointment = Appointment { userEmail = userEmail, coachEmail = coachEmail, appointmentDate = date, appointmentTime = time }
-    putStrLn ("Appointment scheduled with " ++ coachEmail ++ " on " ++ date ++ " at " ++ time)
-    return appointment
 
--- Helper function to display a prompt and get user input
-prompt :: String -> IO String
-prompt message = putStrLn message >> getLine
-
--- Helper function to get email of the user or coach
-getUserEmail :: UserType -> Email
-getUserEmail (User (Credentials email _)) = email
-getUserEmail (Coach (Credentials email _)) = email
 
 -- Function to display the login menu and get user choice
 getChoice :: IO Int

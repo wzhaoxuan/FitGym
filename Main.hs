@@ -29,7 +29,7 @@ data Availability = Availability
 
 -- Define the UserType data type that uses the Credentials type
 data UserType = User Credentials | Coach Credentials deriving (Show)
-data Action = GymWork | MakeAppointment deriving (Show, Read) -- Read typeclass is used to convert string to
+data Action = GymWork | MakeAppointment | GoBackToLogin deriving (Show, Read) -- Read typeclass is used to convert string to
 data Experience = Beginner | Intermediate | Advanced deriving (Show, Read) -- Read typeclass is used to convert string to
 data Goal = Strength | MuscleSize | MuscleEndurance deriving (Show, Read) -- Read typeclass is used to convert string to
 data WorkoutDay = One | Two | Three | Four | Five | Six | Seven deriving (Show, Read) -- Read typeclass is used to convert string
@@ -84,7 +84,8 @@ class Question a where
 instance Question Action where
     askQuestion = askGymQuestion "What would you like to do?" 
                         [("1", GymWork, "GymWork"),
-                         ("2", MakeAppointment, "MakeAppointment")
+                         ("2", MakeAppointment, "MakeAppointment"),
+                         ("3", GoBackToLogin, "GoBackToLogin")
                          ]
 
 instance Question Experience where
@@ -252,6 +253,9 @@ userJourney userType appointments = case userType of
                 putStrLn "***************************************"
                 -- Recurse with the updated appointments list
                 userJourney userType updatedAppointments
+            GoBackToLogin -> do
+                putStrLn "\nReturning to the login screen..."
+                performLogin -- Go back to login screen
     -- For Coach
     Coach (Credentials coachEmail _) -> do
       putStrLn "\n***************************************"

@@ -217,13 +217,13 @@ performLogin =
               Just userType -> 
                      let loginMessage = login userType email password
                      in case loginMessage of
-                            Just message -> putStrLn message >> userJourney userType
+                            Just message -> putStrLn message >> userJourney userType appointments
                             Nothing -> putStrLn "Invalid credentials. Please try again."
               Nothing -> putStrLn "Invalid credentials. Please try again." >> performLogin 
 
 -- Function to display user journey based on user type
-userJourney :: UserType -> IO ()
-userJourney userType = case userType of
+userJourney :: UserType -> [Appointment] -> IO ()
+userJourney userType appointments = case userType of
     -- For User
     User _ -> do
         putStrLn "\n***************************************"
@@ -241,6 +241,8 @@ userJourney userType = case userType of
             MakeAppointment -> do
                 let userEmail = getUserEmail userType
                 appointment <- makeAppointment userEmail coachAvailability
+                -- Update the appointments list
+                let updatedAppointments = appointments ++ [appointment]
                 putStrLn "\n***************************************"
                 putStrLn "         Appointment Scheduled          " 
                 putStrLn "***************************************"
@@ -248,6 +250,8 @@ userJourney userType = case userType of
                     " \nDate: " ++ appointmentDate appointment ++ 
                     " \nTime: " ++ appointmentTime appointment)
                 putStrLn "***************************************"
+                -- Recurse with the updated appointments list
+                userJourney userType updatedAppointments
     -- For Coach
     Coach (Credentials coachEmail _) -> do
       putStrLn "\n***************************************"
@@ -265,7 +269,6 @@ userJourney userType = case userType of
                   putStrLn ("Time: " ++ appointmentTime appointment)
                   putStrLn "***************************************"
                   ) coachAppointments
-
 
 -- Function to display the login menu and get user choice
 getChoice :: IO Int

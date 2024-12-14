@@ -162,6 +162,9 @@ makeAppointment userEmail coachAvailability = do
         }
   return appointment
 
+appointments :: [Appointment]
+appointments = [] 
+
 -- Helper function to get email of the user or coach
 getUserEmail :: UserType -> Email
 getUserEmail (User (Credentials email _)) = email
@@ -220,32 +223,48 @@ performLogin =
 
 -- Function to display user journey based on user type
 userJourney :: UserType -> IO ()
-userJourney userType = case userType of 
-       User _  -> do
-              putStrLn "\n***************************************"
-              putStrLn "                FitGym                  " 
-              putStrLn "***************************************"
-              action <- askQuestion :: IO Action
-              -- Ask the user for their experience, goal, and workout days.
-              case action of 
-                     GymWork -> do
-                            experience <- askQuestion :: IO Experience
-                            goal <- askQuestion :: IO Goal
-                            workoutDay <- askQuestion :: IO WorkoutDay
-                            putStrLn ("You are a " ++ show experience ++ " user with the goal of " ++ show goal ++ ".")
-                            putStrLn ("You plan to work out " ++ show workoutDay ++ " days per week.")
-                     MakeAppointment -> do
-                      let userEmail = getUserEmail userType
-                      appointment <- makeAppointment userEmail coachAvailability
-                      putStrLn "\n***************************************"
-                      putStrLn "         Appointment Scheduled          " 
-                      putStrLn "***************************************"
-                      putStrLn ("Coach: " ++ coachEmail appointment ++ 
-                          " \nDate: " ++ appointmentDate appointment ++ 
-                          " \nTime: " ++ appointmentTime appointment)
-                      putStrLn "***************************************"
-       Coach _ -> putStrLn "You are a coach."
-
+userJourney userType = case userType of
+    -- For User
+    User _ -> do
+        putStrLn "\n***************************************"
+        putStrLn "                FitGym                  " 
+        putStrLn "***************************************"
+        action <- askQuestion :: IO Action
+        -- Ask the user for their experience, goal, and workout days.
+        case action of
+            GymWork -> do
+                experience <- askQuestion :: IO Experience
+                goal <- askQuestion :: IO Goal
+                workoutDay <- askQuestion :: IO WorkoutDay
+                putStrLn ("You are a " ++ show experience ++ " user with the goal of " ++ show goal ++ ".")
+                putStrLn ("You plan to work out " ++ show workoutDay ++ " days per week.")
+            MakeAppointment -> do
+                let userEmail = getUserEmail userType
+                appointment <- makeAppointment userEmail coachAvailability
+                putStrLn "\n***************************************"
+                putStrLn "         Appointment Scheduled          " 
+                putStrLn "***************************************"
+                putStrLn ("Coach: " ++ coachEmail appointment ++ 
+                    " \nDate: " ++ appointmentDate appointment ++ 
+                    " \nTime: " ++ appointmentTime appointment)
+                putStrLn "***************************************"
+    -- For Coach
+    Coach (Credentials coachEmail _) -> do
+      putStrLn "\n***************************************"
+      putStrLn "             FitGym (Coach)             " 
+      putStrLn "***************************************"
+      -- Filter the appointments for this coach
+      let coachAppointments = filter (\appointment -> coachEmail == userEmail appointment) appointments
+      if null coachAppointments
+          then putStrLn "No scheduled appointments."
+          else do
+              putStrLn "Scheduled Appointments:"
+              mapM_ (\appointment -> do
+                  putStrLn ("Coach: " ++ coachEmail)
+                  putStrLn ("Date: " ++ appointmentDate appointment)
+                  putStrLn ("Time: " ++ appointmentTime appointment)
+                  putStrLn "***************************************"
+                  ) coachAppointments
 
 
 -- Function to display the login menu and get user choice

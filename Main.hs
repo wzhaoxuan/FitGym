@@ -113,48 +113,66 @@ class RecommendWorkout a where
 -- Implement the RecommendWorkout instance for the WorkoutPlan type
 instance RecommendWorkout WorkoutPlan where
     recommend (WorkoutPlan Beginner Strength) =
-        "Workout days per week: 3-4\n"  ++
-        "\n***3-Day Workout Plan (Full Body)***\n" ++
-        "Monday\n" ++
-        "1. Warm-up (5-10 minutes):\n" ++
-        "   Light cardio (e.g., treadmill, cycling, or elliptical)\n" ++
-        "   Dynamic stretches (leg swings, arm circles)\n" ++
-        "\n2. Workout:\n" ++
-        "   Barbell Squats: 3 sets of 5-8 reps\n" ++
-        "   Barbell Bench Press: 3 sets of 5-8 reps\n" ++
-        "   Barbell Deadlift: 3 sets of 5 reps\n" ++
-        "   Overhead Press (Barbell or Dumbbells): 3 sets of 5-8 reps\n" ++
-        "   Pull-ups (Assisted if needed) or Lat Pulldown: 3 sets of 6-8 reps\n" ++
-        "   Plank: 3 sets of 30-45 seconds\n" ++
-        "\n3. Cool-down (5-10 minutes):\n" ++
-        "   Stretching: Full body (quads, hamstrings, shoulders, chest)\n" ++
-        "\nWednesday:\n" ++
-        "1. Warm-up (5-10 minutes):\n" ++
-        "   Light cardio (e.g., treadmill, cycling, or elliptical)\n" ++
-        "   Dynamic stretches (leg swings, arm circles)\n" ++
-        "\n2. Workout:\n" ++
-        "   Deadlift (Conventional or Romanian): 3 sets of 5 reps\n" ++
-        "   Dumbbell Lunges: 3 sets of 8-10 reps per leg\n" ++
-        "   Dumbbell Chest Press: 3 sets of 6-8 reps\n" ++
-        "   Seated Row Machine: 3 sets of 8-10 reps\n" ++
-        "   Dumbbell Bicep Curls: 3 sets of 8-10 reps\n" ++
-        "   Tricep Pushdowns (Cable Machine): 3 sets of 8-10 reps\n" ++
-        "\n3. Cool-down (5-10 minutes):\n" ++
-        "   Stretching: Full body (quads, hamstrings, shoulders, chest)\n" ++
-        "\nFriday:\n" ++
-        "1. Warm-up (5-10 minutes):\n" ++
-        "   Light cardio (e.g., treadmill, cycling, or elliptical)\n" ++
-        "   Dynamic stretches (leg swings, arm circles)\n" ++
-        "\n2. Workout:\n" ++
-        "   Barbell Squats (if possible, with slightly higher weight than Day 1): 3 sets of 5 reps\n" ++
-        "   Incline Dumbbell Press: 3 sets of 6-8 reps\n" ++
-        "   Barbell Rows: 3 sets of 5-8 reps\n" ++
-        "   Leg Press Machine: 3 sets of 8-10 reps\n" ++
-        "   Dumbbell Shoulder Press: 3 sets of 6-8 reps\n" ++
-        "   Cable Face Pulls: 3 sets of 10-12 reps\n" ++
-        "\n3. Cool-down (5-10 minutes):\n" ++
-        "   Stretching: Full body (quads, hamstrings, shoulders, chest)"
+      "Workout days per week: 3\n" ++
+      "\n***3-Day Workout Plan (Full Body)***\n" ++
+      "Monday\n" ++
+      "1. Warm-up (5-10 minutes):\n" ++
+      "   Light cardio (e.g., treadmill, cycling, or elliptical)\n" ++
+      "   Dynamic stretches (leg swings, arm circles)\n" ++
+      "   Mobility work (e.g., hip openers, shoulder rotations)\n" ++
+      "\n2. Workout:\n" ++
+      "   Barbell Squats: 3 sets of 5-8 reps (Increase weight gradually each week)\n" ++
+      "   Barbell Bench Press: 3 sets of 5-8 reps (If new, use dumbbells or machine for better control)\n" ++
+      "   Barbell Deadlift: 3 sets of 5 reps (Focus on form, use lighter weights initially)\n" ++
+      "   Overhead Press (Barbell or Dumbbells): 3 sets of 5-8 reps\n" ++
+      "   Pull-ups (Assisted if needed) or Lat Pulldown: 3 sets of 6-8 reps\n" ++
+      "   Plank: 3 sets of 30-45 seconds\n" ++
+      "\n3. Cool-down (5-10 minutes):\n" ++
+      "   Stretching: Full body (quads, hamstrings, shoulders, chest)\n" ++
+      "   Focus on breathing and mobility stretches\n" ++
+      "\nWednesday:\n" ++
+      "1. Warm-up (5-10 minutes):\n" ++
+      "   Light cardio (e.g., treadmill, cycling, or elliptical)\n" ++
+      "   Dynamic stretches (leg swings, arm circles)\n" ++
+      "\n2. Workout:\n" ++
+      "   Deadlift (Conventional or Romanian): 3 sets of 5 reps\n" ++
+      "   Dumbbell Lunges: 3 sets of 8-10 reps per leg\n" ++
+      "   Dumbbell Chest Press: 3 sets of 6-8 reps\n" ++
+      "   Seated Row Machine: 3 sets of 8-10 reps\n" ++
+      "   Dumbbell Bicep Curls: 3 sets of 8-10 reps\n" ++
+      "   Tricep Pushdowns (Cable Machine): 3 sets of 8-10 reps\n" ++
+      "\n3. Cool-down (5-10 minutes):\n" ++
+      "   Stretching: Full body (quads, hamstrings, shoulders, chest)\n" ++
+      "   Focus on flexibility and joint mobility\n" ++
+      "\nFriday:\n" ++
+      "1. Warm-up (5-10 minutes):\n" ++
+      "   Light cardio (e.g., treadmill, cycling, or elliptical)\n" ++
+      "   Dynamic stretches (leg swings, arm circles)\n" ++
+      "\n2. Workout:\n" ++
+      "   Barbell Squats (if possible, with slightly higher weight than Day 1): 3 sets of 5 reps\n" ++
+      "   Incline Dumbbell Press: 3 sets of 6-8 reps\n" ++
+      "   Barbell Rows: 3 sets of 5-8 reps\n" ++
+      "   Leg Press Machine: 3 sets of 8-10 reps (Alternative for squats if new to barbell)\n" ++
+      "   Dumbbell Shoulder Press: 3 sets of 6-8 reps\n" ++
+      "   Cable Face Pulls: 3 sets of 10-12 reps\n" ++
+      "\n3. Cool-down (5-10 minutes):\n" ++
+      "   Stretching: Full body (quads, hamstrings, shoulders, chest)\n" ++
+      "   Emphasize deep breathing and relaxation\n" ++
+      "\nProgression Tips:\n" ++
+      "   Gradually increase weights or reps each week, ensuring you maintain good form.\n" ++
+      "   Aim to stick with the program for at least 6-8 weeks\n" ++
+      "   Aim to progress by 2.5-5 kg (5-10 lbs) per exercise.\n" ++
+      "   Focus on quality over quantity: prioritize proper form.\n" ++
+      "   Don't forget to rest! Aim for at least one rest day between workouts.\n" ++
+      "\nRest & Recovery:\n" ++
+      "   Aim for 7-9 hours of sleep each night for optimal recovery.\n" ++
+      "   Rest between 90 to 120 seconds for heavier lifts (like squats, bench press, deadlifts).\n"++
+      "   Rest around 60 seconds for accessory movements (like curls or shoulder press)\n" ++
+      "   Hydrate well and fuel your body with balanced meals, especially post-workout.\n" ++
+      "\nExercise Alternatives:\n" ++
+      "   If equipment is not available, try using bodyweight exercises or machines as alternatives.\n"
     recommend _ = "No specific recommendation available for your profile."
+
 
 -- Helper function to get the workout recommendation based on user experience and goal
 getRecommendation :: Experience -> Goal -> String

@@ -37,7 +37,7 @@ data UserType = User Credentials | Coach Credentials deriving (Show)
 data Action = GymWork | MakeAppointment | GoBackToLogin deriving (Show, Read) -- Read typeclass is used to convert string to
 data Experience = Beginner | Intermediate | Advanced deriving (Show, Read) -- Read typeclass is used to convert string to
 data Goal = Strength | MuscleSize | MuscleEndurance deriving (Show, Read) -- Read typeclass is used to convert string to
-
+data TipCategory = ProgressionTips Goal| NutritionTips | RestAndRecovery | ExerciseAlternatives
 
 
 -- Predefined credentials for users and coaches
@@ -112,67 +112,121 @@ class RecommendWorkout a where
 
 -- Implement the RecommendWorkout instance for the WorkoutPlan type
 instance RecommendWorkout WorkoutPlan where
-    recommend (WorkoutPlan Beginner Strength) =
-      "Workout days per week: 3\n" ++
-      "\n***3-Day Workout Plan (Full Body)***\n" ++
-      "Monday\n" ++
-      "1. Warm-up (5-10 minutes):\n" ++
-      "   Light cardio (e.g., treadmill, cycling, or elliptical)\n" ++
-      "   Dynamic stretches (leg swings, arm circles)\n" ++
-      "   Mobility work (e.g., hip openers, shoulder rotations)\n" ++
-      "\n2. Workout:\n" ++
-      "   Barbell Squats: 3 sets of 5-8 reps (Increase weight gradually each week)\n" ++
-      "   Barbell Bench Press: 3 sets of 5-8 reps (If new, use dumbbells or machine for better control)\n" ++
-      "   Barbell Deadlift: 3 sets of 5 reps (Focus on form, use lighter weights initially)\n" ++
-      "   Overhead Press (Barbell or Dumbbells): 3 sets of 5-8 reps\n" ++
-      "   Pull-ups (Assisted if needed) or Lat Pulldown: 3 sets of 6-8 reps\n" ++
-      "   Plank: 3 sets of 30-45 seconds\n" ++
-      "\n3. Cool-down (5-10 minutes):\n" ++
-      "   Stretching: Full body (quads, hamstrings, shoulders, chest)\n" ++
-      "   Focus on breathing and mobility stretches\n" ++
-      "\nWednesday:\n" ++
-      "1. Warm-up (5-10 minutes):\n" ++
-      "   Light cardio (e.g., treadmill, cycling, or elliptical)\n" ++
-      "   Dynamic stretches (leg swings, arm circles)\n" ++
-      "\n2. Workout:\n" ++
-      "   Deadlift (Conventional or Romanian): 3 sets of 5 reps\n" ++
-      "   Dumbbell Lunges: 3 sets of 8-10 reps per leg\n" ++
-      "   Dumbbell Chest Press: 3 sets of 6-8 reps\n" ++
-      "   Seated Row Machine: 3 sets of 8-10 reps\n" ++
-      "   Dumbbell Bicep Curls: 3 sets of 8-10 reps\n" ++
-      "   Tricep Pushdowns (Cable Machine): 3 sets of 8-10 reps\n" ++
-      "\n3. Cool-down (5-10 minutes):\n" ++
-      "   Stretching: Full body (quads, hamstrings, shoulders, chest)\n" ++
-      "   Focus on flexibility and joint mobility\n" ++
-      "\nFriday:\n" ++
-      "1. Warm-up (5-10 minutes):\n" ++
-      "   Light cardio (e.g., treadmill, cycling, or elliptical)\n" ++
-      "   Dynamic stretches (leg swings, arm circles)\n" ++
-      "\n2. Workout:\n" ++
-      "   Barbell Squats (if possible, with slightly higher weight than Day 1): 3 sets of 5 reps\n" ++
-      "   Incline Dumbbell Press: 3 sets of 6-8 reps\n" ++
-      "   Barbell Rows: 3 sets of 5-8 reps\n" ++
-      "   Leg Press Machine: 3 sets of 8-10 reps (Alternative for squats if new to barbell)\n" ++
-      "   Dumbbell Shoulder Press: 3 sets of 6-8 reps\n" ++
-      "   Cable Face Pulls: 3 sets of 10-12 reps\n" ++
-      "\n3. Cool-down (5-10 minutes):\n" ++
-      "   Stretching: Full body (quads, hamstrings, shoulders, chest)\n" ++
-      "   Emphasize deep breathing and relaxation\n" ++
-      "\nProgression Tips:\n" ++
-      "   Gradually increase weights or reps each week, ensuring you maintain good form.\n" ++
-      "   Aim to stick with the program for at least 6-8 weeks\n" ++
-      "   Aim to progress by 2.5-5 kg (5-10 lbs) per exercise.\n" ++
-      "   Focus on quality over quantity: prioritize proper form.\n" ++
-      "   Don't forget to rest! Aim for at least one rest day between workouts.\n" ++
-      "\nRest & Recovery:\n" ++
-      "   Aim for 7-9 hours of sleep each night for optimal recovery.\n" ++
-      "   Rest between 90 to 120 seconds for heavier lifts (like squats, bench press, deadlifts).\n"++
-      "   Rest around 60 seconds for accessory movements (like curls or shoulder press)\n" ++
-      "   Hydrate well and fuel your body with balanced meals, especially post-workout.\n" ++
-      "\nExercise Alternatives:\n" ++
-      "   If equipment is not available, try using bodyweight exercises or machines as alternatives.\n"
+    recommend (WorkoutPlan Beginner Strength) = unlines[
+       "Workout days per week: 3",
+        "***3-Day Workout Plan (Full Body)***",
+        "Monday",
+        generateWarmUp,
+        "2. Workout:\n   Barbell Squats: 3 sets of 5-8 reps (Increase weight gradually each week)",
+        "   Barbell Bench Press: 3 sets of 5-8 reps (If new, use dumbbells or machine for better control)",
+        "   Barbell Deadlift: 3 sets of 5 reps (Focus on form, use lighter weights initially)",
+        "   Overhead Press (Barbell or Dumbbells): 3 sets of 5-8 reps",
+        "   Pull-ups (Assisted if needed) or Lat Pulldown: 3 sets of 6-8 reps",
+        "   Plank: 3 sets of 30-45 seconds\n",
+        generateCoolDown,
+        "Wednesday",
+        generateWarmUp,
+        "2. Workout:\n   Deadlift (Conventional or Romanian): 3 sets of 5 reps",
+        "   Dumbbell Lunges: 3 sets of 8-10 reps per leg",
+        "   Dumbbell Chest Press: 3 sets of 6-8 reps",
+        "   Seated Row Machine: 3 sets of 8-10 reps",
+        "   Dumbbell Bicep Curls: 3 sets of 8-10 reps" ,
+        "   Tricep Pushdowns (Cable Machine): 3 sets of 8-10 reps\n",
+        generateCoolDown,
+        "Friday",
+        generateWarmUp,
+        "2. Workout:\n   Barbell Squats (if possible, with slightly higher weight than Day 1): 3 sets of 5 reps",
+        "   Incline Dumbbell Press: 3 sets of 6-8 reps",
+        "   Barbell Rows: 3 sets of 5-8 reps",
+        "   Leg Press Machine: 3 sets of 8-10 reps (Alternative for squats if new to barbell)" ,
+        "   Dumbbell Shoulder Press: 3 sets of 6-8 reps",
+        "   Cable Face Pulls: 3 sets of 10-12 reps\n",
+        generateCoolDown,
+        generateExerciseTips]
+
+    recommend (WorkoutPlan Beginner MuscleSize) = unlines[
+       "Workout days per week: 3",
+        "***3-Day Workout Plan (Full Body Split for Hypertrophy)***",
+        "Monday",
+        generateWarmUp,
+        "2. Workout:\n  Barbell Squats: 4 sets of 8-10 reps (Focus on depth and full range of motion)",
+        "   Barbell Bench Press: 4 sets of 8-10 reps (Ensure a controlled motion and steady pace)",
+        "   Dumbbell Row: 4 sets of 8-10 reps (Keep your back neutral, avoid swinging)",
+        "   Dumbbell Shoulder Press: 3 sets of 8-10 reps (Start light to master form)",
+        "   Leg Press Machine: 3 sets of 10-12 reps (Alternative for squats if new)",
+        "   Tricep Pushdowns (Cable): 3 sets of 10-12 reps",
+        "   Dumbbell Bicep Curls: 3 sets of 10-12 reps\n",
+        generateCoolDown,
+        "Wednesday",
+        generateWarmUp,
+        "2. Workout:\n  Deadlift (Conventional or Romanian): 4 sets of 6-8 reps (Focus on hip hinge)",
+        "   Incline Dumbbell Press: 4 sets of 8-10 reps (Slow and controlled descent)",
+        "   Lat Pulldown or Pull-ups: 3 sets of 8-10 reps (Work full range of motion)",
+        "   Dumbbell Lateral Raises: 3 sets of 12-15 reps (Focus on mind-muscle connection)",
+        "   Lunges (Dumbbells or Barbell): 3 sets of 10-12 reps per leg",
+        "   Leg Curls (Machine): 3 sets of 10-12 reps",
+        "   Cable Face Pulls: 3 sets of 12-15 reps\n",
+        generateCoolDown,
+        "Friday",
+        generateWarmUp,
+        "2. Workout:\n    Barbell Squats: 4 sets of 8-10 reps (Gradually increase weight from Day 1)",
+        "   Dumbbell Chest Press: 4 sets of 8-10 reps",
+        "   Barbell Rows: 4 sets of 8-10 reps",
+        "   Overhead Press (Barbell or Dumbbells): 3 sets of 8-10 rep",
+        "   Dumbbell Bicep Curls: 3 sets of 10-12 reps",
+        "   Tricep Dips (Bodyweight or Weighted): 3 sets of 8-10 reps",
+        "   Planks: 3 sets of 30-45 seconds\n",
+        generateCoolDown,
+        "\nProgression Tips:\n" ++
+        "   Gradually increase weights or reps each week. Try adding 2.5-5 kg (5-10 lbs) to your lifts every 2-3 weeks.\n" ++
+        "   Focus on proper form before increasing weight.\n" ++
+        "   Aim for 1-2 more reps per set each week to increase volume.\n" ++
+        "   Rest for 60-90 seconds between sets to maintain intensity.\n" ++
+        "\nNutrition Tips:\n" ++
+        "   Ensure you're consuming enough protein to support muscle growth (around 1.6-2.2g/kg of body weight).\n" ++
+        "\nRest & Recovery:\n" ++
+        "   Aim for 7-9 hours of sleep each night for optimal recovery.\n" ++
+        "   Make sure to hydrate well and consume a balanced diet, with sufficient protein intake for muscle growth.\n" ++
+        "\nExercise Alternatives:\n" ++
+        "   If you don’t have access to free weights or machines, you can substitute exercises with bodyweight alternatives, such as push-ups, bodyweight squats, or resistance bands.\n" ++
+        "   Use resistance bands or machines if you lack dumbbells or barbells for certain exercises.\n"]
     recommend _ = "No specific recommendation available for your profile."
 
+-- Define a helper function to generate warm-up, workout, and cool-down sections
+generateWarmUp :: String
+generateWarmUp = unlines [
+    "1. Warm-up (5-10 minutes):",
+    "   Light cardio (e.g., treadmill, cycling, or elliptical)",
+    "   Dynamic stretches (leg swings, arm circles)",
+    "   Mobility work (e.g., hip openers, shoulder rotations)"
+  ]
+
+generateCoolDown :: String
+generateCoolDown = unlines [
+    "3. Cool-down (5-10 minutes):",
+    "   Stretching: Full body (quads, hamstrings, shoulders, chest)",
+    "   Focus on breathing and mobility stretches"
+  ]
+
+-- Helper function to generate workout exercises tips sections
+generateExerciseTips :: String 
+generateExerciseTips = unlines[
+      "Progression Tips:",
+      "   Gradually increase weights or reps each week, ensuring you maintain good form.",
+      "   Aim to stick with the program for at least 6-8 weeks",
+      "   Aim to progress by 2.5-5 kg (5-10 lbs) per exercise.",
+      "   Focus on quality over quantity: prioritize proper form.",
+      "   Don't forget to rest! Aim for at least one rest day between workouts.",
+      "\nNutrition Tips:",
+      "   Ensure you're consuming enough protein to build strength (around 1.6-2.2g/kg of body weight).",
+      "\nRest & Recovery:",
+      "   Aim for 7-9 hours of sleep each night for optimal recovery.",
+      "   Rest between 90 to 120 seconds for heavier lifts (like squats, bench press, deadlifts).",
+      "   Rest around 60 seconds for accessory movements (like curls or shoulder press)",
+      "   Hydrate well and fuel your body with balanced meals, especially post-workout.",
+      "\nExercise Alternatives:",
+      "   If you don’t have access to free weights or machines, you can substitute exercises with bodyweight alternatives, such as push-ups, bodyweight squats, or resistance bands.\n" ++
+      "   Use resistance bands or machines if you lack dumbbells or barbells for certain exercises.\n"]
 
 -- Helper function to get the workout recommendation based on user experience and goal
 getRecommendation :: Experience -> Goal -> String

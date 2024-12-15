@@ -142,7 +142,10 @@ instance RecommendWorkout WorkoutPlan where
         "   Dumbbell Shoulder Press: 3 sets of 6-8 reps",
         "   Cable Face Pulls: 3 sets of 10-12 reps\n",
         generateCoolDown,
-        generateExerciseTips]
+        generateTips (ProgressionTips Strength),
+        generateTips NutritionTips,
+        generateTips RestAndRecovery,
+        generateTips ExerciseAlternatives]
 
     recommend (WorkoutPlan Beginner MuscleSize) = unlines[
        "Workout days per week: 3",
@@ -177,19 +180,10 @@ instance RecommendWorkout WorkoutPlan where
         "   Tricep Dips (Bodyweight or Weighted): 3 sets of 8-10 reps",
         "   Planks: 3 sets of 30-45 seconds\n",
         generateCoolDown,
-        "\nProgression Tips:\n" ++
-        "   Gradually increase weights or reps each week. Try adding 2.5-5 kg (5-10 lbs) to your lifts every 2-3 weeks.\n" ++
-        "   Focus on proper form before increasing weight.\n" ++
-        "   Aim for 1-2 more reps per set each week to increase volume.\n" ++
-        "   Rest for 60-90 seconds between sets to maintain intensity.\n" ++
-        "\nNutrition Tips:\n" ++
-        "   Ensure you're consuming enough protein to support muscle growth (around 1.6-2.2g/kg of body weight).\n" ++
-        "\nRest & Recovery:\n" ++
-        "   Aim for 7-9 hours of sleep each night for optimal recovery.\n" ++
-        "   Make sure to hydrate well and consume a balanced diet, with sufficient protein intake for muscle growth.\n" ++
-        "\nExercise Alternatives:\n" ++
-        "   If you don’t have access to free weights or machines, you can substitute exercises with bodyweight alternatives, such as push-ups, bodyweight squats, or resistance bands.\n" ++
-        "   Use resistance bands or machines if you lack dumbbells or barbells for certain exercises.\n"]
+        generateTips (ProgressionTips MuscleSize),
+        generateTips NutritionTips,
+        generateTips RestAndRecovery,
+        generateTips ExerciseAlternatives]
     recommend _ = "No specific recommendation available for your profile."
 
 -- Define a helper function to generate warm-up, workout, and cool-down sections
@@ -208,25 +202,42 @@ generateCoolDown = unlines [
     "   Focus on breathing and mobility stretches"
   ]
 
--- Helper function to generate workout exercises tips sections
-generateExerciseTips :: String 
-generateExerciseTips = unlines[
-      "Progression Tips:",
+  -- Helper function to generate tips based on the category
+generateTips :: TipCategory -> String
+generateTips (ProgressionTips Strength) = unlines [
+    "Progression Tips:",
       "   Gradually increase weights or reps each week, ensuring you maintain good form.",
       "   Aim to stick with the program for at least 6-8 weeks",
       "   Aim to progress by 2.5-5 kg (5-10 lbs) per exercise.",
       "   Focus on quality over quantity: prioritize proper form.",
-      "   Don't forget to rest! Aim for at least one rest day between workouts.",
-      "\nNutrition Tips:",
-      "   Ensure you're consuming enough protein to build strength (around 1.6-2.2g/kg of body weight).",
-      "\nRest & Recovery:",
+      "   Don't forget to rest! Aim for at least one rest day between workouts."
+  ]
+generateTips (ProgressionTips MuscleSize) = unlines [
+    "Progression Tips:",
+      "   Gradually increase weights or reps each week. Try adding 2.5-5 kg (5-10 lbs) to your lifts every 2-3 weeks.",
+      "   Focus on proper form before increasing weight.",
+      "   Aim for 1-2 more reps per set each week to increase volume.",
+      "   Rest for 60-90 seconds between sets to maintain intensity."
+  ]
+generateTips (ProgressionTips MuscleEndurance) = unlines [
+    "   Focus on increasing your workout duration and the number of repetitions.",
+    "   Gradually reduce rest time between sets for improved cardiovascular endurance."
+  ]
+generateTips NutritionTips = unlines [
+    "   Ensure you're consuming enough protein (around 1.6-2.2g/kg of body weight)."
+  ]
+generateTips RestAndRecovery = unlines [
+    "Rest & Recovery:",
       "   Aim for 7-9 hours of sleep each night for optimal recovery.",
       "   Rest between 90 to 120 seconds for heavier lifts (like squats, bench press, deadlifts).",
       "   Rest around 60 seconds for accessory movements (like curls or shoulder press)",
-      "   Hydrate well and fuel your body with balanced meals, especially post-workout.",
-      "\nExercise Alternatives:",
+      "   Hydrate well and fuel your body with balanced meals, especially post-workout."
+  ]
+generateTips ExerciseAlternatives = unlines [
+    "\nExercise Alternatives:",
       "   If you don’t have access to free weights or machines, you can substitute exercises with bodyweight alternatives, such as push-ups, bodyweight squats, or resistance bands.\n" ++
-      "   Use resistance bands or machines if you lack dumbbells or barbells for certain exercises.\n"]
+      "   Use resistance bands or machines if you lack dumbbells or barbells for certain exercises.\n"
+  ]
 
 -- Helper function to get the workout recommendation based on user experience and goal
 getRecommendation :: Experience -> Goal -> String

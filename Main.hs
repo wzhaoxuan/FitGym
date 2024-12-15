@@ -26,13 +26,18 @@ data Availability = Availability
   , time :: [(String, [String])] -- (day, [time])
   } deriving (Show)
 
+-- Define a data type for users with their workout recommendation
+data WorkoutPlan = WorkoutPlan
+  { experience :: Experience
+  , goal :: Goal
+  } deriving (Show)
 
 -- Define the UserType data type that uses the Credentials type
 data UserType = User Credentials | Coach Credentials deriving (Show)
 data Action = GymWork | MakeAppointment | GoBackToLogin deriving (Show, Read) -- Read typeclass is used to convert string to
 data Experience = Beginner | Intermediate | Advanced deriving (Show, Read) -- Read typeclass is used to convert string to
 data Goal = Strength | MuscleSize | MuscleEndurance deriving (Show, Read) -- Read typeclass is used to convert string to
-data WorkoutDay = One | Two | Three | Four | Five | Six | Seven deriving (Show, Read) -- Read typeclass is used to convert string
+
 
 
 -- Predefined credentials for users and coaches
@@ -98,17 +103,63 @@ instance Question Goal where
     askQuestion = askGymQuestion "What is your goal at the gym?" 
                         [("1", Strength, "Strength: Focus on building muscle strength"),
                          ("2", MuscleSize, "Muscle Size: Focus on hypertrophy to grow muscle mass"),
-                         ("3", MuscleEndurance, "Muscle Endurance: Focus on endurance to sustain longer workouts")]
+                         ("3", MuscleEndurance, "Muscle Endurance: Focus on endurance to sustain longer workouts")] 
 
-instance Question WorkoutDay where
-    askQuestion = askGymQuestion "How many days per week do you plan to work out (1-7)?" 
-                        [("1", One, "1 day per week"),
-                         ("2", Two, "2 days per week"),
-                         ("3", Three, "3 days per week"),
-                         ("4", Four, "4 days per week"),
-                         ("5", Five, "5 days per week"),
-                         ("6", Six, "6 days per week"),
-                         ("7", Seven, "7 days per week")]
+
+-- Define a class for recommending workouts
+class RecommendWorkout a where
+    recommend :: a -> String
+
+-- Implement the RecommendWorkout instance for the WorkoutPlan type
+instance RecommendWorkout WorkoutPlan where
+    recommend (WorkoutPlan Beginner Strength) =
+        "Workout days per week: 3-4\n"  ++
+        "\n***3-Day Workout Plan (Full Body)***\n" ++
+        "Monday\n" ++
+        "1. Warm-up (5-10 minutes):\n" ++
+        "   Light cardio (e.g., treadmill, cycling, or elliptical)\n" ++
+        "   Dynamic stretches (leg swings, arm circles)\n" ++
+        "\n2. Workout:\n" ++
+        "   Barbell Squats: 3 sets of 5-8 reps\n" ++
+        "   Barbell Bench Press: 3 sets of 5-8 reps\n" ++
+        "   Barbell Deadlift: 3 sets of 5 reps\n" ++
+        "   Overhead Press (Barbell or Dumbbells): 3 sets of 5-8 reps\n" ++
+        "   Pull-ups (Assisted if needed) or Lat Pulldown: 3 sets of 6-8 reps\n" ++
+        "   Plank: 3 sets of 30-45 seconds\n" ++
+        "\n3. Cool-down (5-10 minutes):\n" ++
+        "   Stretching: Full body (quads, hamstrings, shoulders, chest)\n" ++
+        "\nWednesday:\n" ++
+        "1. Warm-up (5-10 minutes):\n" ++
+        "   Light cardio (e.g., treadmill, cycling, or elliptical)\n" ++
+        "   Dynamic stretches (leg swings, arm circles)\n" ++
+        "\n2. Workout:\n" ++
+        "   Deadlift (Conventional or Romanian): 3 sets of 5 reps\n" ++
+        "   Dumbbell Lunges: 3 sets of 8-10 reps per leg\n" ++
+        "   Dumbbell Chest Press: 3 sets of 6-8 reps\n" ++
+        "   Seated Row Machine: 3 sets of 8-10 reps\n" ++
+        "   Dumbbell Bicep Curls: 3 sets of 8-10 reps\n" ++
+        "   Tricep Pushdowns (Cable Machine): 3 sets of 8-10 reps\n" ++
+        "\n3. Cool-down (5-10 minutes):\n" ++
+        "   Stretching: Full body (quads, hamstrings, shoulders, chest)\n" ++
+        "\nFriday:\n" ++
+        "1. Warm-up (5-10 minutes):\n" ++
+        "   Light cardio (e.g., treadmill, cycling, or elliptical)\n" ++
+        "   Dynamic stretches (leg swings, arm circles)\n" ++
+        "\n2. Workout:\n" ++
+        "   Barbell Squats (if possible, with slightly higher weight than Day 1): 3 sets of 5 reps\n" ++
+        "   Incline Dumbbell Press: 3 sets of 6-8 reps\n" ++
+        "   Barbell Rows: 3 sets of 5-8 reps\n" ++
+        "   Leg Press Machine: 3 sets of 8-10 reps\n" ++
+        "   Dumbbell Shoulder Press: 3 sets of 6-8 reps\n" ++
+        "   Cable Face Pulls: 3 sets of 10-12 reps\n" ++
+        "\n3. Cool-down (5-10 minutes):\n" ++
+        "   Stretching: Full body (quads, hamstrings, shoulders, chest)"
+    recommend _ = "No specific recommendation available for your profile."
+
+-- Helper function to get the workout recommendation based on user experience and goal
+getRecommendation :: Experience -> Goal -> String
+getRecommendation experience goal =
+    recommend (WorkoutPlan experience goal)
 
 -- Helper function to display and select an option from a list
 selectOption :: String -> [String] -> IO (Maybe String)
@@ -132,8 +183,8 @@ retryOnInvalid action errorMessage = do
       retryOnInvalid action errorMessage
 
 -- Main function to make an appointment
-makeAppointment :: String -> [Availability] -> IO Appointment
-makeAppointment userEmail coachAvailability = do
+makeAppointment :: String -> [Availability] -> [Appointment] -> IO [Appointment]
+makeAppointment userEmail coachAvailability appointments = do
   -- Step 1: Select a coach
   let coachEmails = map emailCoach coachAvailability
   selectedCoachEmail <- retryOnInvalid
@@ -154,17 +205,44 @@ makeAppointment userEmail coachAvailability = do
     (selectOption "\nAvailable times:" timesForDate)
     "Invalid time selection. Please try again."
 
-  -- Step 5: Create and return the appointment
-  let appointment = Appointment
+  -- Step 5: Create the appointment
+  let newAppointment = Appointment
         { userEmail = userEmail
         , coachEmail = selectedCoachEmail
         , appointmentDate = selectedDate
         , appointmentTime = selectedTime
         }
-  return appointment
 
-appointments :: [Appointment]
-appointments = [] 
+  -- Step 6: Add the new appointment to the list and return the updated list
+  let updatedAppointments = newAppointment : appointments
+  putStrLn "\n***************************************"
+  putStrLn "         Appointment Scheduled          " 
+  putStrLn "***************************************"
+  putStrLn ("Coach: " ++ coachEmail newAppointment ++ 
+      " \nDate: " ++ appointmentDate newAppointment ++ 
+      " \nTime: " ++ appointmentTime newAppointment)
+  putStrLn "***************************************"
+  return updatedAppointments
+
+-- Function to display appointments for the logged-in coach
+viewCoachAppointments :: Email -> [Appointment] -> IO ()
+viewCoachAppointments email appointments = 
+    let coachAppointments = filter (\app -> email == coachEmail app) appointments
+    in if null coachAppointments
+        then putStrLn "No appointments scheduled.\n"
+        else do
+            putStrLn "\nAppointments scheduled for you:"
+            mapM_ printAppointment coachAppointments
+
+-- Helper function to print an appointment
+printAppointment :: Appointment -> IO ()
+printAppointment app = 
+    putStrLn "***************************************" >>
+    putStrLn ("User Email: " ++ userEmail app) >> 
+    putStrLn ("Date: " ++ appointmentDate app) >>
+    putStrLn ("Time: " ++ appointmentTime app) >>
+    putStrLn "***************************************"
+
 
 -- Helper function to get email of the user or coach
 getUserEmail :: UserType -> Email
@@ -178,10 +256,10 @@ askGymQuestion prompt options = do
     mapM_ (\(label, _, description) -> putStrLn (label ++ ": " ++ description)) options
     putStr "Enter your choice: "
     choice <- getLine
-    putStrLn "\n***************************************"
+    putStrLn "\n******************************************************************"
     case lookup choice (map (\(label, _, description) -> (label, description)) options) of
-        Just description -> putStrLn ("             " ++ description ++ "            ") >>
-                            putStrLn "***************************************"
+        Just description -> putStrLn ("                 " ++ description ++ "            ") >>
+                            putStrLn "******************************************************************"
         Nothing -> putStrLn "Invalid choice. Please try again." 
     case lookup choice (map (\(label, val, _) -> (label, val)) options) of
         Just result -> return result
@@ -218,7 +296,7 @@ performLogin =
               Just userType -> 
                      let loginMessage = login userType email password
                      in case loginMessage of
-                            Just message -> putStrLn message >> userJourney userType appointments
+                            Just message -> putStrLn message >> userJourney userType []
                             Nothing -> putStrLn "Invalid credentials. Please try again."
               Nothing -> putStrLn "Invalid credentials. Please try again." >> performLogin 
 
@@ -236,21 +314,13 @@ userJourney userType appointments = case userType of
             GymWork -> do
                 experience <- askQuestion :: IO Experience
                 goal <- askQuestion :: IO Goal
-                workoutDay <- askQuestion :: IO WorkoutDay
-                putStrLn ("You are a " ++ show experience ++ " user with the goal of " ++ show goal ++ ".")
-                putStrLn ("You plan to work out " ++ show workoutDay ++ " days per week.")
+                putStrLn ("For a " ++ show experience ++ " focusing on building " ++ show goal ++ ".")
+                -- Provide workout recommendation based on experience and goal
+                let recommendation = getRecommendation experience goal
+                putStrLn recommendation -- Display the recommendation to the user
             MakeAppointment -> do
                 let userEmail = getUserEmail userType
-                appointment <- makeAppointment userEmail coachAvailability
-                -- Update the appointments list
-                let updatedAppointments = appointments ++ [appointment]
-                putStrLn "\n***************************************"
-                putStrLn "         Appointment Scheduled          " 
-                putStrLn "***************************************"
-                putStrLn ("Coach: " ++ coachEmail appointment ++ 
-                    " \nDate: " ++ appointmentDate appointment ++ 
-                    " \nTime: " ++ appointmentTime appointment)
-                putStrLn "***************************************"
+                updatedAppointments <- makeAppointment userEmail coachAvailability appointments
                 -- Recurse with the updated appointments list
                 userJourney userType updatedAppointments
             GoBackToLogin -> do
@@ -259,20 +329,16 @@ userJourney userType appointments = case userType of
     -- For Coach
     Coach (Credentials coachEmail _) -> do
       putStrLn "\n***************************************"
-      putStrLn "             FitGym (Coach)             " 
+      putStrLn "             Coach Dashboard            " 
       putStrLn "***************************************"
-      -- Filter the appointments for this coach
-      let coachAppointments = filter (\appointment -> coachEmail == userEmail appointment) appointments
-      if null coachAppointments
-          then putStrLn "No scheduled appointments."
-          else do
-              putStrLn "Scheduled Appointments:"
-              mapM_ (\appointment -> do
-                  putStrLn ("Coach: " ++ coachEmail)
-                  putStrLn ("Date: " ++ appointmentDate appointment)
-                  putStrLn ("Time: " ++ appointmentTime appointment)
-                  putStrLn "***************************************"
-                  ) coachAppointments
+      viewCoachAppointments coachEmail appointments
+      action <- askQuestion :: IO Action
+      case action of
+      -- Continue with other actions...
+          GoBackToLogin -> do
+              putStrLn "\nReturning to the login screen..."
+              performLogin -- Go back to login screen
+          _ -> userJourney userType appointments -- Recurse to allow more actions
 
 -- Function to display the login menu and get user choice
 getChoice :: IO Int

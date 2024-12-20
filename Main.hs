@@ -1,6 +1,7 @@
 import Text.Read (readMaybe)
 import Data.Maybe (fromMaybe)
 import Data.List (find)
+import GHC.Event.Windows (updateTimeout)
 
 -- Define the Email, Password, and Description types
 type Email = String
@@ -220,10 +221,12 @@ generateTips (ProgressionTips MuscleSize) = unlines [
       "   Rest for 60-90 seconds between sets to maintain intensity."
   ]
 generateTips (ProgressionTips MuscleEndurance) = unlines [
+  "Progression Tips:",
     "   Focus on increasing your workout duration and the number of repetitions.",
     "   Gradually reduce rest time between sets for improved cardiovascular endurance."
   ]
 generateTips NutritionTips = unlines [
+  "Nutrition:",
     "   Ensure you're consuming enough protein (around 1.6-2.2g/kg of body weight)."
   ]
 generateTips RestAndRecovery = unlines [
@@ -235,8 +238,8 @@ generateTips RestAndRecovery = unlines [
   ]
 generateTips ExerciseAlternatives = unlines [
     "\nExercise Alternatives:",
-      "   If you don’t have access to free weights or machines, you can substitute exercises with bodyweight alternatives, such as push-ups, bodyweight squats, or resistance bands.\n" ++
-      "   Use resistance bands or machines if you lack dumbbells or barbells for certain exercises.\n"
+      "   If you do not have access to free weights or machines, you can substitute exercises with bodyweight alternatives, such as push-ups, bodyweight squats, or resistance bands.",
+      "   Use resistance bands or machines if you lack dumbbells or barbells for certain exercises."
   ]
 
 -- Helper function to get the workout recommendation based on user experience and goal
@@ -298,34 +301,29 @@ makeAppointment userEmail coachAvailability appointments = do
 
   -- Step 6: Add the new appointment to the list and return the updated list
   let updatedAppointments = newAppointment : appointments
-  putStrLn "\n***************************************"
-  putStrLn "         Appointment Scheduled          " 
-  putStrLn "***************************************"
+  putStrLn "--------Appointment Scheduled--------" 
   putStrLn ("Coach: " ++ coachEmail newAppointment ++ 
       " \nDate: " ++ appointmentDate newAppointment ++ 
       " \nTime: " ++ appointmentTime newAppointment)
-  putStrLn "***************************************"
   return updatedAppointments
 
 -- Function to display appointments for the logged-in coach
-viewCoachAppointments :: Email -> [Appointment] -> IO ()
+viewCoachAppointments :: Email -> IO [Appointment] -> IO ()
 viewCoachAppointments email appointments = 
-    let coachAppointments = filter (\app -> email == coachEmail app) appointments
+    appointments >>= \apt ->
+    let coachAppointments = filter (\app -> email == coachEmail app) apt
     in if null coachAppointments
         then putStrLn "No appointments scheduled.\n"
         else do
-            putStrLn "\nAppointments scheduled for you:"
+          putStrLn "\n--------Appointment--------" >>
             mapM_ printAppointment coachAppointments
 
 -- Helper function to print an appointment
 printAppointment :: Appointment -> IO ()
 printAppointment app = 
-    putStrLn "***************************************" >>
     putStrLn ("User Email: " ++ userEmail app) >> 
     putStrLn ("Date: " ++ appointmentDate app) >>
-    putStrLn ("Time: " ++ appointmentTime app) >>
-    putStrLn "***************************************"
-
+    putStrLn ("Time: " ++ appointmentTime app ++ "\n") 
 
 -- Helper function to get email of the user or coach
 getUserEmail :: UserType -> Email
@@ -339,10 +337,8 @@ askGymQuestion prompt options = do
     mapM_ (\(label, _, description) -> putStrLn (label ++ ": " ++ description)) options
     putStr "Enter your choice: "
     choice <- getLine
-    putStrLn "\n******************************************************************"
     case lookup choice (map (\(label, _, description) -> (label, description)) options) of
-        Just description -> putStrLn ("                 " ++ description ++ "            ") >>
-                            putStrLn "******************************************************************"
+        Just description -> putStrLn ("\n--------" ++ description ++ "--------")
         Nothing -> putStrLn "Invalid choice. Please try again." 
     case lookup choice (map (\(label, val, _) -> (label, val)) options) of
         Just result -> return result
@@ -365,8 +361,8 @@ validCredentials enteredEmail enteredPassword =
                _ -> Nothing
 
 -- Function to perform login
-performLogin :: IO ()
-performLogin = 
+performLogin :: [Appointment] -> IO ()
+performLogin apt = 
        putStrLn "\n***************************************" >>
        putStrLn "     Welcome to the FitGym System      " >>
        putStrLn "***************************************" >>
@@ -379,9 +375,9 @@ performLogin =
               Just userType -> 
                      let loginMessage = login userType email password
                      in case loginMessage of
-                            Just message -> putStrLn message >> userJourney userType []
+                            Just message -> putStrLn message >> userJourney userType apt
                             Nothing -> putStrLn "Invalid credentials. Please try again."
-              Nothing -> putStrLn "Invalid credentials. Please try again." >> performLogin 
+              Nothing -> putStrLn "Invalid credentials. Please try again." >> performLogin apt
 
 -- Function to display user journey based on user type
 userJourney :: UserType -> [Appointment] -> IO ()
@@ -408,19 +404,19 @@ userJourney userType appointments = case userType of
                 userJourney userType updatedAppointments
             GoBackToLogin -> do
                 putStrLn "\nReturning to the login screen..."
-                performLogin -- Go back to login screen
+                performLogin appointments -- Go back to login screen
     -- For Coach
     Coach (Credentials coachEmail _) -> do
       putStrLn "\n***************************************"
       putStrLn "             Coach Dashboard            " 
       putStrLn "***************************************"
-      viewCoachAppointments coachEmail appointments
+      viewCoachAppointments coachEmail (return appointments)
       action <- askQuestion :: IO Action
       case action of
       -- Continue with other actions...
           GoBackToLogin -> do
               putStrLn "\nReturning to the login screen..."
-              performLogin -- Go back to login screen
+              performLogin appointments-- Go back to login screen
           _ -> userJourney userType appointments -- Recurse to allow more actions
 
 -- Function to display the login menu and get user choice
@@ -444,7 +440,7 @@ getChoice =
 main :: IO ()
 main = getChoice >>= \choice -> 
        case choice of
-              1 -> performLogin
+              1 -> performLogin []
               2 -> putStrLn "Exiting the system. Goodbye!"
               _ -> do
                      putStrLn "Invalid choice. Please try again.\n"

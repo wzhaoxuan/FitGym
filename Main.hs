@@ -2,6 +2,7 @@ import Text.Read (readMaybe)
 import Data.Maybe (fromMaybe)
 import Data.List (find, sortBy, groupBy)
 import Data.Function (on)
+import Control.Monad (zipWithM_)
 
 -- Define the Email, Password, and Description types
 type Email = String
@@ -710,21 +711,52 @@ displayLogEntry (LogEntry name date sets reps) =
     putStrLn ("Reps: " ++ show reps)
 
 
--- Function to customize the gym work plan
+-- Function to customize the gym work plan with workouts chosen by numbers
 customizeGymWorkPlan :: IO GymWorkPlan
-customizeGymWorkPlan =
-    putStr "Enter the name of your plan:" >>
+customizeGymWorkPlan = 
+    putStrLn "Enter the name of your plan:" >> 
     getLine >>= \planName ->
-    putStr "Enter the number of days you plan to work out per week:" >>
+    putStrLn "Enter the number of days you plan to work out per week:" >> 
     readLn >>= \numberOfDays ->
-    let days = map (\day -> "Day " ++ show day) [1 .. numberOfDays] 
-    in putStrLn "\n--------You have created the plan--------" >>
-       putStrLn ("Plan Name: " ++ planName)>>
-       putStrLn ("Day per Week: " ++ show numberOfDays) >>
-       putStrLn "Here is your workout schedule:" >>
-       mapM_ putStrLn days >>
+    let days = map (\day -> "Day " ++ show day) [1 .. numberOfDays] in
+
+    -- Prompt the user to select workouts for each day
+    mapM (\day -> 
+        putStrLn (day ++ ":") >> 
+        askGymQuestion "Choose an exercise type for this day:" 
+            [("1", Abs, "Abs"),
+             ("2", Back, "Back"),
+             ("3", Biceps, "Biceps"),
+             ("4", Calf, "Calf"),
+             ("5", Chest, "Chest"),
+             ("6", Forearms, "Forearms"),
+             ("7", Legs, "Legs"),
+             ("8", Shoulders, "Shoulders"),
+             ("9", Triceps, "Triceps")] >>= \exercise ->
+        let workouts = getWorkouts exercise in
+        putStrLn "Available workouts:" >> 
+        zipWithM_ (\i (Workout name desc) -> putStrLn (show i ++ ". " ++ name)) [1 ..] workouts >>
+        putStrLn "Enter the numbers of the workouts you want for this day (comma-separated):" >>
+        getLine >>= \workoutInput ->
+        let workoutNumbers = map read (wordsWhen (== ',') workoutInput) in
+        let selectedWorkouts = [name | i <- workoutNumbers, let (Workout name _) = workouts !! (i - 1)] in
+        return (day, selectedWorkouts)
+    ) days >>= \workoutSchedule ->
+
+    -- Display the final workout schedule
+    putStrLn "Here is your complete workout plan:" >> 
+    mapM_ (\(day, workouts) -> 
+        putStrLn day >> 
+        mapM_ (\w -> putStrLn ("  - " ++ w)) workouts
+    ) workoutSchedule >>
     return (GymWorkPlan planName numberOfDays)
 
+-- Helper function to split a string by a delimiter
+wordsWhen :: (Char -> Bool) -> String -> [String]
+wordsWhen p s = case dropWhile p s of
+    "" -> []
+    s' -> w : wordsWhen p s''
+          where (w, s'') = break p s'
 
 
 -- Helper function to retry on invalid input

@@ -1,3 +1,6 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use lambda-case" #-}
+{-# HLINT ignore "Use void" #-}
 import Text.Read (readMaybe)
 import Data.Maybe (fromMaybe)
 import Data.List (find)
@@ -43,7 +46,7 @@ data LogEntry = LogEntry
   } deriving (Show, Read)
 
 -- The first String is the workout name, and the second String is a brief description.
-data Workout = Workout WorkOutName Description deriving (Show, Read) 
+data Workout = Workout WorkOutName Description deriving (Show, Read)
 
 -- Define the UserType data type that uses the Credentials type
 data UserType = User Credentials | Coach Credentials deriving (Show)
@@ -69,13 +72,13 @@ validCoachCredentials =
 
 coachAvailability :: [Availability]
 coachAvailability = [
-       Availability { emailCoach = "Jane@fitgym.com", 
-       day = ["Monday", "Wednesday", "Friday"], 
+       Availability { emailCoach = "Jane@fitgym.com",
+       day = ["Monday", "Wednesday", "Friday"],
        time = [("Monday", ["10:00", "11:00"]), ("Wednesday", ["10:00", "11:00"]), ("Friday", ["10:00", "11:00"])]
        },
 
-       Availability { emailCoach = "Jack@fitgym.com", 
-       day = ["Monday", "Tuesday", "Thursday"], 
+       Availability { emailCoach = "Jack@fitgym.com",
+       day = ["Monday", "Tuesday", "Thursday"],
        time = [("Monday", ["10:00", "11:00"]), ("Tuesday", ["12:00", "2:00"]), ("Thursday", ["10:00", "11:00"])]
        }]
 
@@ -101,7 +104,7 @@ class Question a where
        askQuestion :: IO a
 
 instance Question Action where
-    askQuestion = askGymQuestion "What would you like to do?" 
+    askQuestion = askGymQuestion "What would you like to do?"
                         [("1", RecommendGymWork, "Recommend GymWork"),
                          ("2", GymWork, "GymWork"),
                          ("3", MakeAppointment, "MakeAppointment"),
@@ -110,7 +113,7 @@ instance Question Action where
                          ]
 
 instance Question Exercise where
-    askQuestion = askGymQuestion "What exercise would you like to do?" 
+    askQuestion = askGymQuestion "What exercise would you like to do?"
                         [("1", Abs, "Abs"),
                          ("2", Back, "Back"),
                          ("3", Biceps, "Biceps"),
@@ -123,16 +126,16 @@ instance Question Exercise where
 
 
 instance Question Experience where
-    askQuestion = askGymQuestion "What is your experience at the gym?" 
+    askQuestion = askGymQuestion "What is your experience at the gym?"
                         [("1", Beginner, "Beginner"),
                          ("2", Intermediate, "Intermediate"),
                          ("3", Advanced, "Advanced")]
 
 instance Question Goal where
-    askQuestion = askGymQuestion "What is your goal at the gym?" 
+    askQuestion = askGymQuestion "What is your goal at the gym?"
                         [("1", Strength, "Strength: Focus on building muscle strength"),
                          ("2", MuscleSize, "Muscle Size: Focus on hypertrophy to grow muscle mass"),
-                         ("3", MuscleEndurance, "Muscle Endurance: Focus on endurance to sustain longer workouts")] 
+                         ("3", MuscleEndurance, "Muscle Endurance: Focus on endurance to sustain longer workouts")]
 
 
 -- Define a class for recommending workouts
@@ -141,7 +144,7 @@ class RecommendWorkout a where
 
 -- Implement the RecommendWorkout instance for the WorkoutRecommend type
 instance RecommendWorkout WorkoutRecommend where
-    recommend (WorkoutRecommend Beginner Strength) = unlines[
+    recommend (WorkoutRecommend Beginner Strength) = unlines [
        "Workout days per week: 3",
         "***3-Day Workout Plan (Full Body)***",
         "Day 1",
@@ -176,7 +179,7 @@ instance RecommendWorkout WorkoutRecommend where
         generateTips RestAndRecovery,
         generateTips ExerciseAlternatives]
 
-    recommend (WorkoutRecommend Beginner MuscleSize) = unlines[
+    recommend (WorkoutRecommend Beginner MuscleSize) = unlines [
        "Workout days per week: 3",
         "***3-Day Workout Plan (Full Body Split for Hypertrophy)***",
         "Day 1",
@@ -214,7 +217,7 @@ instance RecommendWorkout WorkoutRecommend where
         generateTips RestAndRecovery,
         generateTips ExerciseAlternatives]
 
-    recommend (WorkoutRecommend Beginner MuscleEndurance) = unlines[
+    recommend (WorkoutRecommend Beginner MuscleEndurance) = unlines [
       "Workout days per week: 3",
         "***3-Day Workout Plan (Muscle Endurance Focus)***",
         "Day 1",
@@ -245,8 +248,8 @@ instance RecommendWorkout WorkoutRecommend where
         generateTips NutritionTips,
         generateTips RestAndRecovery,
         generateTips ExerciseAlternatives]
-    
-    recommend (WorkoutRecommend Intermediate Strength) = unlines[
+
+    recommend (WorkoutRecommend Intermediate Strength) = unlines [
       "Workout days per week: 4",
         "***4-Day Workout Plan (Muscle Endurance Focus)***",
         "Day 1 (Upper Body Push)",
@@ -291,7 +294,7 @@ instance RecommendWorkout WorkoutRecommend where
         generateTips RestAndRecovery,
         generateTips ExerciseAlternatives]
 
-    recommend (WorkoutRecommend Intermediate MuscleSize) = unlines[
+    recommend (WorkoutRecommend Intermediate MuscleSize) = unlines [
       "Workout days per week: 4",
         "***4-Day Workout Plan (Muscle Endurance Focus)***",
         "Day 1 (Chest, Shoulders, Triceps)",
@@ -335,8 +338,8 @@ instance RecommendWorkout WorkoutRecommend where
         generateTips NutritionTips,
         generateTips RestAndRecovery,
         generateTips ExerciseAlternatives]
-    
-    recommend (WorkoutRecommend Intermediate MuscleEndurance) = unlines[
+
+    recommend (WorkoutRecommend Intermediate MuscleEndurance) = unlines [
       "Workout days per week: 3",
         "***3-Day Workout Plan (Muscle Endurance Focus)***",
         "Day 1 (Full Body Circuit)",
@@ -371,7 +374,7 @@ instance RecommendWorkout WorkoutRecommend where
         generateTips RestAndRecovery,
         generateTips ExerciseAlternatives]
 
-    recommend (WorkoutRecommend Advanced Strength) = unlines[
+    recommend (WorkoutRecommend Advanced Strength) = unlines [
         "Workout days per week: 4",
         "***4-Day Workout Plan (Upper Body Strength)***",
         "Day 1 (Push-Pull Focus)",
@@ -413,7 +416,7 @@ instance RecommendWorkout WorkoutRecommend where
         generateTips RestAndRecovery,
         generateTips ExerciseAlternatives]
 
-    recommend (WorkoutRecommend Advanced MuscleSize) = unlines[
+    recommend (WorkoutRecommend Advanced MuscleSize) = unlines [
       "Workout days per week: 5",
         "***5-Day Workout Plan (Muscle Endurance Focus)***",
         "Day 1 (Push-Pull Focus)",
@@ -466,7 +469,7 @@ instance RecommendWorkout WorkoutRecommend where
         generateTips RestAndRecovery,
         generateTips ExerciseAlternatives]
 
-    recommend (WorkoutRecommend Advanced MuscleEndurance) = unlines[
+    recommend (WorkoutRecommend Advanced MuscleEndurance) = unlines [
       "Workout days per week: 5",
         "***5-Day Workout Plan (Muscle Endurance Focus)***",
         "Day 1 (Full-Body Circuit)",
@@ -644,7 +647,7 @@ getWorkouts exercise = case exercise of
                   Workout "Dumbbell Rows" "Hold a dumbbell in each hand with your palms facing each other. Row the weights towards your torso, squeezing your shoulder blades.\n",
                   Workout "Rear Delt Fly (Cable or Dumbbells)" "Stand with a dumbbell in each hand. Raise the weights out to the sides and slightly back, then lower them back down.\n",
                   Workout "Latera Raises" "Stand with a dumbbell in each hand. Raise the weights out to the sides to shoulder height, then lower them back down.\n"]
-                  
+
     Triceps   -> [Workout "Tricep Pushdowns (Cable)" "Attach a rope to a cable machine. Hold the rope with an overhand grip. Push the rope down, extending your arms.\n",
                   Workout "Tricep Dips" "Hold onto parallel bars with your arms straight. Lower your body by bending your elbows, then push back up.\n",
                   Workout "Cable Tricep Pushdowns" "Attach a rope to a cable machine. Hold the rope with an overhand grip. Push the rope down, extending your arms.\n",
@@ -652,32 +655,31 @@ getWorkouts exercise = case exercise of
 
 -- Function to log a workout
 logWorkout :: String -> IO LogEntry
-logWorkout workoutName = do
-  putStrLn "Do you want to add this workout to your log? (yes/no)"
-  response <- getLine
-  if response == "yes" then do
-    putStr "Enter the date (format: YYYY-MM-DD):"
-    date <- getLine
-    putStr "Enter the number of sets:"
-    numSets <- readLn
-    putStr "Enter the number of reps per set:"
-    numReps <- readLn
-    let logEntry = LogEntry workoutName date numSets numReps
-    putStrLn "Workout logged!"
-    return logEntry
-  else if response == "no" then do
-    putStrLn "Workout not logged."
-    return (LogEntry workoutName "" 0 0) -- Return an empty log entry if not logged
-  else do
-    putStrLn "Invalid response. Please try again."
-    logWorkout workoutName
+logWorkout workoutName =
+  putStrLn "Do you want to add this workout to your log? (yes/no)" >>
+  getLine >>= \response ->
+  if response == "yes"
+    then
+      putStr "Enter the date (format: YYYY-MM-DD):" >>
+       getLine >>= \date ->
+       putStr "Enter the number of sets:" >>
+       readLn >>= \numSets ->
+       putStr "Enter the number of reps per set:" >>
+       readLn >>= \numReps ->
+       let logEntry = LogEntry workoutName date numSets numReps
+       in putStrLn "Workout logged!" >> return logEntry
+    else if response == "no"
+      then putStrLn "Workout not logged." >> return (LogEntry workoutName "" 0 0) -- Return an empty log entry if not logged
+    else
+      putStrLn "Invalid response. Please try again." >> logWorkout workoutName
+
 
 -- Function to display the log
 displayLog :: [LogEntry] -> IO ()
-displayLog log = 
+displayLog log =
     (if null log
         then putStrLn "No workouts logged yet."
-        else mapM_ displayLogEntry log) >>= \_ -> return () -- Return after displaying
+        else mapM_ displayLogEntry log) >> return () -- Return after displaying
 
 -- Helper function to display each log entry
 displayLogEntry :: LogEntry -> IO ()
@@ -735,21 +737,21 @@ makeAppointment userEmail coachAvailability appointments =
 
 -- Function to display appointments for the logged-in coach
 viewCoachAppointments :: Email -> IO [Appointment] -> IO ()
-viewCoachAppointments email appointments = 
+viewCoachAppointments email appointments =
     appointments >>= \apt ->
     let coachAppointments = filter (\app -> email == coachEmail app) apt
     in if null coachAppointments
         then putStrLn "No appointments scheduled.\n"
-        else 
+        else
           putStrLn "\n--------Appointment--------" >>
             mapM_ printAppointment coachAppointments
 
 -- Helper function to print an appointment
 printAppointment :: Appointment -> IO ()
-printAppointment app = 
-    putStrLn ("User Email: " ++ userEmail app) >> 
+printAppointment app =
+    putStrLn ("User Email: " ++ userEmail app) >>
     putStrLn ("Date: " ++ appointmentDate app) >>
-    putStrLn ("Time: " ++ appointmentTime app ++ "\n") 
+    putStrLn ("Time: " ++ appointmentTime app ++ "\n")
 
 -- Helper function to get email of the user or coach
 getUserEmail :: UserType -> Email
@@ -765,7 +767,7 @@ askGymQuestion prompt options = do
     choice <- getLine
     case lookup choice (map (\(label, _, description) -> (label, description)) options) of
         Just description -> putStrLn ("\n--------" ++ description ++ "--------")
-        Nothing -> putStrLn "Invalid choice. Please try again." 
+        Nothing -> putStrLn "Invalid choice. Please try again."
     case lookup choice (map (\(label, val, _) -> (label, val)) options) of
         Just result -> return result
         Nothing -> putStrLn "Invalid choice. Please try again." >> askGymQuestion prompt options
@@ -778,7 +780,7 @@ prompt message = putStrLn message >> getLine
 
 -- Validate credentials and return the appropriate UserType
 validCredentials :: String -> String -> Maybe UserType
-validCredentials enteredEmail enteredPassword = 
+validCredentials enteredEmail enteredPassword =
     -- Check if the email and password match valid user credentials
     case lookup enteredEmail (map (\(Credentials e p) -> (e, p)) validUserCredentials) of
         Just correctPassword | correctPassword == enteredPassword -> Just (User (Credentials enteredEmail enteredPassword))
@@ -788,17 +790,17 @@ validCredentials enteredEmail enteredPassword =
 
 -- Function to perform login
 performLogin :: [Appointment] -> [LogEntry] -> IO ()
-performLogin apt log = 
+performLogin apt log =
        putStrLn "\n***************************************" >>
        putStrLn "     Welcome to the FitGym System      " >>
        putStrLn "***************************************" >>
        putStr "Enter your email: " >>
-       getLine >>= \email -> 
+       getLine >>= \email ->
        putStr "Enter your password: " >>
-       getLine >>= \password -> 
+       getLine >>= \password ->
        -- Apply the validation function and handle the result using a Functor
        case validCredentials email password of
-              Just userType -> 
+              Just userType ->
                      let loginMessage = login userType email password
                      in case loginMessage of
                             Just message -> putStrLn message >> userJourney userType apt log
@@ -811,7 +813,7 @@ userJourney userType appointments log = case userType of
     -- For User
     User _ -> do
         putStrLn "\n***************************************"
-        putStrLn "                FitGym                  " 
+        putStrLn "                FitGym                  "
         putStrLn "***************************************"
         action <- askQuestion :: IO Action
         -- Ask the user for their experience, goal, and workout days.
@@ -846,14 +848,14 @@ userJourney userType appointments log = case userType of
                 updatedAppointments <- makeAppointment userEmail coachAvailability appointments
                 -- Recurse with the updated appointments list
                 userJourney userType updatedAppointments log
-          
+
             GoBackToLogin -> do
                 putStrLn "Returning to the login screen...\n"
                 getChoice >> performLogin appointments log-- Go back to login screen  
     -- For Coach
     Coach (Credentials coachEmail _) -> do
       putStrLn "\n***************************************"
-      putStrLn "             Coach Dashboard            " 
+      putStrLn "             Coach Dashboard            "
       putStrLn "***************************************"
       viewCoachAppointments coachEmail (return appointments)
       action <- askQuestion :: IO Action
@@ -871,20 +873,20 @@ getChoice =
     putStrLn "1. Login" >>
     putStrLn "2. Exit" >>
     putStr "Enter your choice: " >>
-    getLine >>= \choice -> 
+    getLine >>= \choice ->
        case readMaybe choice :: Maybe Int of
-              Just input -> 
-                     return input 
+              Just input ->
+                     return input
               Nothing ->
                      putStrLn "Invalid choice. Please enter a number.\n" >>
-                     getChoice 
+                     getChoice
 
 -- Main function
 main :: IO ()
-main = getChoice >>= \choice -> 
+main = getChoice >>= \choice ->
        case choice of
               1 -> performLogin [] []
               2 -> putStrLn "Exiting the system. Goodbye!"
-              _ -> 
+              _ ->
                      putStrLn "Invalid choice. Please try again.\n" >>
                      main -- Recursively call main to allow another attempt

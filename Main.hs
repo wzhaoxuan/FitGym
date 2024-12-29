@@ -1,9 +1,8 @@
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Use lambda-case" #-}
-{-# HLINT ignore "Use void" #-}
 import Text.Read (readMaybe)
 import Data.Maybe (fromMaybe)
 import Data.List (find)
+import Data.List (sortBy, groupBy)
+import Data.Function (on)
 
 -- Define the Email, Password, and Description types
 type Email = String
@@ -674,20 +673,35 @@ logWorkout workoutName =
       putStrLn "Invalid response. Please try again." >> logWorkout workoutName
 
 
--- Function to display the log
+-- Function to display the log grouped by date
 displayLog :: [LogEntry] -> IO ()
-displayLog log =
-    (if null log
-        then putStrLn "No workouts logged yet."
-        else mapM_ displayLogEntry log) >> return () -- Return after displaying
+displayLog log = 
+    if null log
+    then putStrLn "No workouts logged yet."
+    else mapM_ displayLogGroup (groupWorkoutsByDate (sortWorkoutsByDate log)) >> return ()
+
+-- Function to sort workouts by date
+sortWorkoutsByDate :: [LogEntry] -> [LogEntry]
+sortWorkoutsByDate = sortBy (compare `on` workoutDate)
+
+-- Function to group workouts by date
+groupWorkoutsByDate :: [LogEntry] -> [[LogEntry]]
+groupWorkoutsByDate = groupBy ((==) `on` workoutDate)
+
+-- Helper function to display each group of log entries for a particular date
+displayLogGroup :: [LogEntry] -> IO ()
+displayLogGroup group = 
+    let date = workoutDate (head group)  -- All entries in the group have the same date
+    in putStrLn ("Date: " ++ date) >>
+       mapM_ displayLogEntry group >>
+       putStrLn "-------------------------------"
 
 -- Helper function to display each log entry
 displayLogEntry :: LogEntry -> IO ()
-displayLogEntry (LogEntry name date sets reps) = do
-    putStrLn $ "Workout: " ++ name
-    putStrLn $ "Date: " ++ date
-    putStrLn $ "Sets: " ++ show sets
-    putStrLn $ "Reps: " ++ show reps
+displayLogEntry (LogEntry name date sets reps) = 
+    putStrLn ("Workout: " ++ name) >>
+    putStrLn ("Sets: " ++ show sets) >>
+    putStrLn ("Reps: " ++ show reps)
 
 -- Helper function to retry on invalid input
 retryOnInvalid :: IO (Maybe a) -> String -> IO a
@@ -770,7 +784,7 @@ askGymQuestion prompt options = do
         Nothing -> putStrLn "Invalid choice. Please try again."
     case lookup choice (map (\(label, val, _) -> (label, val)) options) of
         Just result -> return result
-        Nothing -> putStrLn "Invalid choice. Please try again." >> askGymQuestion prompt options
+        Nothing -> askGymQuestion prompt options
 
 
 -- Helper function to display a prompt and get user input
@@ -848,7 +862,6 @@ userJourney userType appointments log = case userType of
                 updatedAppointments <- makeAppointment userEmail coachAvailability appointments
                 -- Recurse with the updated appointments list
                 userJourney userType updatedAppointments log
-
             GoBackToLogin -> do
                 putStrLn "Returning to the login screen...\n"
                 getChoice >> performLogin appointments log-- Go back to login screen  

@@ -714,32 +714,16 @@ displayLogEntry (LogEntry name date sets reps) =
 -- Function to customize the gym work plan with workouts chosen by numbers
 customizeGymWorkPlan :: IO GymWorkPlan
 customizeGymWorkPlan = 
-    putStrLn "Enter the name of your plan:" >> 
-    getLine >>= \planName ->
-    putStrLn "Enter the number of days you plan to work out per week:" >> 
-    readLn >>= \numberOfDays ->
+    putStr "Enter the name of your plan: " >> 
+    getLine >>= \planName -> 
+    putStr "Enter the number of days you plan to work out per week: " >> 
+    readLn >>= \numberOfDays -> 
     let days = map (\day -> "Day " ++ show day) [1 .. numberOfDays] in
 
     -- Prompt the user to select workouts for each day
     mapM (\day -> 
         putStrLn (day ++ ":") >> 
-        askGymQuestion "Choose an exercise type for this day:" 
-            [("1", Abs, "Abs"),
-             ("2", Back, "Back"),
-             ("3", Biceps, "Biceps"),
-             ("4", Calf, "Calf"),
-             ("5", Chest, "Chest"),
-             ("6", Forearms, "Forearms"),
-             ("7", Legs, "Legs"),
-             ("8", Shoulders, "Shoulders"),
-             ("9", Triceps, "Triceps")] >>= \exercise ->
-        let workouts = getWorkouts exercise in
-        putStrLn "Available workouts:" >> 
-        zipWithM_ (\i (Workout name desc) -> putStrLn (show i ++ ". " ++ name)) [1 ..] workouts >>
-        putStrLn "Enter the numbers of the workouts you want for this day (comma-separated):" >>
-        getLine >>= \workoutInput ->
-        let workoutNumbers = map read (wordsWhen (== ',') workoutInput) in
-        let selectedWorkouts = [name | i <- workoutNumbers, let (Workout name _) = workouts !! (i - 1)] in
+        selectWorkouts [] >>= \selectedWorkouts ->  -- Start with an empty list for the day's workouts
         return (day, selectedWorkouts)
     ) days >>= \workoutSchedule ->
 
@@ -748,8 +732,28 @@ customizeGymWorkPlan =
     mapM_ (\(day, workouts) -> 
         putStrLn day >> 
         mapM_ (\w -> putStrLn ("  - " ++ w)) workouts
-    ) workoutSchedule >>
+    ) workoutSchedule >> 
     return (GymWorkPlan planName numberOfDays)
+
+-- Helper function to handle the workout selection for a day
+selectWorkouts :: [String] -> IO [String]
+selectWorkouts selectedWorkouts = 
+    askQuestion >>= \exercise ->  -- Ask for exercise
+    let workouts = getWorkouts exercise in
+    putStrLn "Available workouts:" >>
+    zipWithM_ (\i (Workout name _) -> putStrLn (show i ++ ". " ++ name)) [1 ..] workouts >>
+    putStr "Enter the numbers of the workouts you want for this session (comma-separated): " >>
+    getLine >>= \workoutInput ->  -- Get workout input
+    let workoutNumbers = map read (wordsWhen (== ',') workoutInput) in
+    let newWorkouts = [name | i <- workoutNumbers, let (Workout name _) = workouts !! (i - 1)] in
+    let updatedWorkouts = selectedWorkouts ++ newWorkouts in  -- Add new workouts to the list
+    
+    putStr "Would you like to add more exercises for this day? (yes/no): " >>  -- Ask if they want to add more
+    getLine >>= \response ->
+        if response == "yes" 
+        then selectWorkouts updatedWorkouts  -- Recursively call to add more workouts
+        else return updatedWorkouts  -- Return selected workouts when done
+
 
 -- Helper function to split a string by a delimiter
 wordsWhen :: (Char -> Bool) -> String -> [String]

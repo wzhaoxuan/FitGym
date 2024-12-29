@@ -1,7 +1,6 @@
 import Text.Read (readMaybe)
 import Data.Maybe (fromMaybe)
-import Data.List (find)
-import Data.List (sortBy, groupBy)
+import Data.List (find, sortBy, groupBy)
 import Data.Function (on)
 
 -- Define the Email, Password, and Description types
@@ -44,12 +43,18 @@ data LogEntry = LogEntry
   , reps :: Int
   } deriving (Show, Read)
 
+-- Define the structure for a GymWorkPlan
+data GymWorkPlan = GymWorkPlan
+  { planName :: String
+  , numberOfDays :: Int  -- Days the user wants to work out
+  } deriving (Show, Read)
+
 -- The first String is the workout name, and the second String is a brief description.
 data Workout = Workout WorkOutName Description deriving (Show, Read)
 
 -- Define the UserType data type that uses the Credentials type
 data UserType = User Credentials | Coach Credentials deriving (Show)
-data Action = RecommendGymWork | GymWork | MakeAppointment | ViewLog | GoBackToLogin deriving (Show, Read) -- Read typeclass is used to convert string to
+data Action = RecommendGymWork | GymWork | MakeAppointment |  CustomPlan | ViewLog | GoBackToLogin deriving (Show, Read) -- Read typeclass is used to convert string to
 data Exercise = Abs | Back | Biceps | Calf | Chest | Forearms | Legs | Shoulders | Triceps deriving (Show, Read) -- Read typeclass is used to convert string to
 data Experience = Beginner | Intermediate | Advanced deriving (Show, Read) -- Read typeclass is used to convert string to
 data Goal = Strength | MuscleSize | MuscleEndurance deriving (Show, Read) -- Read typeclass is used to convert string to
@@ -106,10 +111,11 @@ instance Question Action where
     askQuestion = askGymQuestion "What would you like to do?"
                         [("1", RecommendGymWork, "Recommend GymWork"),
                          ("2", GymWork, "GymWork"),
-                         ("3", MakeAppointment, "MakeAppointment"),
-                         ("4", ViewLog, "ViewLog"),
-                         ("5", GoBackToLogin, "GoBackToLogin")
-                         ]
+                         ("3", CustomPlan, "CustomPlan"),
+                         ("4", MakeAppointment, "MakeAppointment"),
+                         ("5", ViewLog, "ViewLog"),
+                         ("6", GoBackToLogin, "GoBackToLogin")]
+                         
 
 instance Question Exercise where
     askQuestion = askGymQuestion "What exercise would you like to do?"
@@ -703,6 +709,24 @@ displayLogEntry (LogEntry name date sets reps) =
     putStrLn ("Sets: " ++ show sets) >>
     putStrLn ("Reps: " ++ show reps)
 
+
+-- Function to customize the gym work plan
+customizeGymWorkPlan :: IO GymWorkPlan
+customizeGymWorkPlan =
+    putStr "Enter the name of your plan:" >>
+    getLine >>= \planName ->
+    putStr "Enter the number of days you plan to work out per week:" >>
+    readLn >>= \numberOfDays ->
+    let days = map (\day -> "Day " ++ show day) [1 .. numberOfDays] 
+    in putStrLn "\n--------You have created the plan--------" >>
+       putStrLn ("Plan Name: " ++ planName)>>
+       putStrLn ("Day per Week: " ++ show numberOfDays) >>
+       putStrLn "Here is your workout schedule:" >>
+       mapM_ putStrLn days >>
+    return (GymWorkPlan planName numberOfDays)
+
+
+
 -- Helper function to retry on invalid input
 retryOnInvalid :: IO (Maybe a) -> String -> IO a
 retryOnInvalid action errorMessage =
@@ -853,6 +877,10 @@ userJourney userType appointments log = case userType of
                 -- If logEntry is not empty, add it to the log
                 let updatedLog = if workoutName logEntry /= "" then logEntry : log else log
                 userJourney userType appointments updatedLog
+            CustomPlan -> do
+                -- Prompt the user to customize their gym work plan
+                customizedPlan <- customizeGymWorkPlan
+                userJourney userType appointments log
             ViewLog -> do
                 -- Display the workout log
                 displayLog log

@@ -734,27 +734,24 @@ askNumberOfDays = do
             askNumberOfDays  -- Recursively call until valid input is provided
 
 selectWorkouts :: [String] -> IO [String]
-selectWorkouts selectedWorkouts = do
-    exercise <- askQuestion  -- Ask for exercise
+selectWorkouts selectedWorkouts = 
+    askQuestion >>= \exercise ->  -- Ask for exercise
     let workouts = getWorkouts exercise
         validNumbers = [1 .. length workouts]  -- Valid range of workout numbers
-    putStrLn "Available workouts:"
-    zipWithM_ (\i (Workout name _) -> putStrLn (show i ++ ". " ++ name)) [1 ..] workouts
-    putStr "Enter the numbers of the workouts you want for this session (comma-separated): "
-    workoutInput <- getLine  -- Get workout input
-    let workoutNumbers = map read (wordsWhen (== ',') workoutInput)
-    if all (`elem` validNumbers) workoutNumbers
-      then do
-        let newWorkouts = [name | i <- workoutNumbers, let (Workout name _) = workouts !! (i - 1)]
-            updatedWorkouts = selectedWorkouts ++ newWorkouts  -- Add new workouts to the list
-        putStr "Would you like to add more exercises for this day? (yes/no): "
-        response <- getLine
-        if response == "yes"
-          then selectWorkouts updatedWorkouts  -- Recursively call to add more workouts
-          else return updatedWorkouts  -- Return selected workouts when done
-      else do
-        putStrLn "Invalid workout number(s). Please try again."
-        selectWorkouts selectedWorkouts  -- Retry workout selection
+    in putStrLn "Available workouts:" >>
+       zipWithM_ (\i (Workout name _) -> putStrLn (show i ++ ". " ++ name)) [1 ..] workouts >>
+       putStr "Enter the numbers of the workouts you want for this session (comma-separated): " >>
+       getLine >>= \workoutInput ->  -- Get workout input
+       let workoutNumbers = map read (wordsWhen (== ',') workoutInput)
+       in if all (`elem` validNumbers) workoutNumbers
+          then putStr "Would you like to add more exercises for this day? (yes/no): " >>
+               getLine >>= \response ->
+               if response == "yes"
+               then selectWorkouts (selectedWorkouts ++ [name | i <- workoutNumbers, let (Workout name _) = workouts !! (i - 1)])  -- Recursively call to add more workouts
+               else return (selectedWorkouts ++ [name | i <- workoutNumbers, let (Workout name _) = workouts !! (i - 1)])  -- Return selected workouts when done
+          else putStrLn "Invalid workout number(s). Please try again." >>
+               selectWorkouts selectedWorkouts  -- Retry workout selection
+
 
 
 -- Helper function to split a string by a delimiter

@@ -716,8 +716,7 @@ customizeGymWorkPlan :: IO GymWorkPlan
 customizeGymWorkPlan = 
     putStr "Enter the name of your plan: " >> 
     getLine >>= \planName -> 
-    putStr "Enter the number of days you plan to work out per week: " >> 
-    readLn >>= \numberOfDays -> 
+    askNumberOfDays >>= \numberOfDays -> 
     let days = map (\day -> "Day " ++ show day) [1 .. numberOfDays] in
 
     -- Prompt the user to select workouts for each day
@@ -734,6 +733,17 @@ customizeGymWorkPlan =
         mapM_ (\w -> putStrLn ("  - " ++ w)) workouts
     ) workoutSchedule >> 
     return (GymWorkPlan planName numberOfDays)
+
+-- Helper function to ask for a valid number of days
+askNumberOfDays :: IO Int
+askNumberOfDays = do
+    putStr "Enter the number of days you plan to work out per week (1-7): "
+    numberOfDays <- readLn
+    if numberOfDays >= 1 && numberOfDays <= 7
+        then return numberOfDays
+        else do
+            putStrLn "Invalid number of days. Please enter a number between 1 and 7."
+            askNumberOfDays  -- Recursively call until valid input is provided
 
 -- Helper function to handle the workout selection for a day
 selectWorkouts :: [String] -> IO [String]

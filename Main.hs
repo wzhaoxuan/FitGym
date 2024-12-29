@@ -35,7 +35,8 @@ data WorkoutPlan = WorkoutPlan
 
 -- Define the UserType data type that uses the Credentials type
 data UserType = User Credentials | Coach Credentials deriving (Show)
-data Action = GymWork | MakeAppointment | GoBackToLogin deriving (Show, Read) -- Read typeclass is used to convert string to
+data Action = RecommendGymWork | GymWork | MakeAppointment | GoBackToLogin deriving (Show, Read) -- Read typeclass is used to convert string to
+data Exercise = Abs | Back | Biceps | Calf | Chest | Forearms | Legs | Shoulders | Triceps deriving (Show, Read) -- Read typeclass is used to convert string to
 data Experience = Beginner | Intermediate | Advanced deriving (Show, Read) -- Read typeclass is used to convert string to
 data Goal = Strength | MuscleSize | MuscleEndurance deriving (Show, Read) -- Read typeclass is used to convert string to
 data TipCategory = ProgressionTips Goal| NutritionTips | RestAndRecovery | ExerciseAlternatives
@@ -89,10 +90,24 @@ class Question a where
 
 instance Question Action where
     askQuestion = askGymQuestion "What would you like to do?" 
-                        [("1", GymWork, "GymWork"),
-                         ("2", MakeAppointment, "MakeAppointment"),
-                         ("3", GoBackToLogin, "GoBackToLogin")
+                        [("1", RecommendGymWork, "Recommend GymWork"),
+                         ("2", GymWork, "GymWork"),
+                         ("3", MakeAppointment, "MakeAppointment"),
+                         ("4", GoBackToLogin, "GoBackToLogin")
                          ]
+
+instance Question Exercise where
+    askQuestion = askGymQuestion "What exercise would you like to do?" 
+                        [("1", Abs, "Abs"),
+                         ("2", Back, "Back"),
+                         ("3", Biceps, "Biceps"),
+                         ("4", Calf, "Calf"),
+                         ("5", Chest, "Chest"),
+                         ("6", Forearms, "Forearms"),
+                         ("7", Legs, "Legs"),
+                         ("8", Shoulders, "Shoulders"),
+                         ("9", Triceps, "Triceps")]
+
 
 instance Question Experience where
     askQuestion = askGymQuestion "What is your experience at the gym?" 
@@ -123,7 +138,7 @@ instance RecommendWorkout WorkoutPlan where
         "   Barbell Deadlift: 3 sets of 5 reps (Focus on form, use lighter weights initially)",
         "   Overhead Press (Barbell or Dumbbells): 3 sets of 5-8 reps",
         "   Pull-ups (Assisted if needed) or Lat Pulldown: 3 sets of 6-8 reps",
-        "   Plank: 3 sets of 30-45 seconds\n",
+        "   Chest: 3 sets of 30-45 seconds\n",
         generateCoolDown,
         "Day 2",
         generateWarmUp,
@@ -153,7 +168,7 @@ instance RecommendWorkout WorkoutPlan where
         "***3-Day Workout Plan (Full Body Split for Hypertrophy)***",
         "Day 1",
         generateWarmUp,
-        "2. Workout:\n  Barbell Squats: 4 sets of 8-10 reps (Focus on depth and full range of motion)",
+        "2. Workout:\n   Barbell Squats: 4 sets of 8-10 reps (Focus on depth and full range of motion)",
         "   Barbell Bench Press: 4 sets of 8-10 reps (Ensure a controlled motion and steady pace)",
         "   Dumbbell Row: 4 sets of 8-10 reps (Keep your back neutral, avoid swinging)",
         "   Dumbbell Shoulder Press: 3 sets of 8-10 reps (Start light to master form)",
@@ -163,7 +178,7 @@ instance RecommendWorkout WorkoutPlan where
         generateCoolDown,
         "Day 2",
         generateWarmUp,
-        "2. Workout:\n  Deadlift (Conventional or Romanian): 4 sets of 6-8 reps (Focus on hip hinge)",
+        "2. Workout:\n   Deadlift (Conventional or Romanian): 4 sets of 6-8 reps (Focus on hip hinge)",
         "   Incline Dumbbell Press: 4 sets of 8-10 reps (Slow and controlled descent)",
         "   Lat Pulldown or Pull-ups: 3 sets of 8-10 reps (Work full range of motion)",
         "   Dumbbell Lateral Raises: 3 sets of 12-15 reps (Focus on mind-muscle connection)",
@@ -173,13 +188,13 @@ instance RecommendWorkout WorkoutPlan where
         generateCoolDown,
         "Day 3",
         generateWarmUp,
-        "2. Workout:\n    Barbell Squats: 4 sets of 8-10 reps (Gradually increase weight from Day 1)",
+        "2. Workout:\n   Barbell Squats: 4 sets of 8-10 reps (Gradually increase weight from Day 1)",
         "   Dumbbell Chest Press: 4 sets of 8-10 reps",
         "   Barbell Rows: 4 sets of 8-10 reps",
         "   Overhead Press (Barbell or Dumbbells): 3 sets of 8-10 rep",
         "   Dumbbell Bicep Curls: 3 sets of 10-12 reps",
         "   Tricep Dips (Bodyweight or Weighted): 3 sets of 8-10 reps",
-        "   Planks: 3 sets of 30-45 seconds\n",
+        "   Chests: 3 sets of 30-45 seconds\n",
         generateCoolDown,
         generateTips (ProgressionTips MuscleSize),
         generateTips NutritionTips,
@@ -195,11 +210,11 @@ instance RecommendWorkout WorkoutPlan where
         "   Dumbbell Bench Press: 3 sets of 12-15 reps (If new, use dumbbells or machine for better control)",
         "   Dumbbell Row (each arm): 3 sets of 12-15 reps (Focus on form, use lighter weights initially)",
         "   Standing Overhead Dumbbell Press: 3 sets of 12-15 reps",
-        "   Plank with Shoulder Taps: 3 sets of 30 seconds\n",
+        "   Chest with Shoulder Taps: 3 sets of 30 seconds\n",
         generateCoolDown,
         "Day 2",
         generateWarmUp,
-        "2. Workout:\n  Lunges (Bodyweight or Dumbbells): 3 sets of 12-15 reps per leg",
+        "2. Workout:\n   Lunges (Bodyweight or Dumbbells): 3 sets of 12-15 reps per leg",
         "   Incline Dumbbell Press: 3 sets of 12-15 reps (Slow and controlled descent)",
         "   Lat Pulldown or Pull-ups: 3 sets of 12-15 reps (Work full range of motion)",
         "   Dumbbell Lateral Raises: 3 sets of 12-15 reps (Focus on mind-muscle connection)",
@@ -207,11 +222,11 @@ instance RecommendWorkout WorkoutPlan where
         generateCoolDown,
         "Day 3",
         generateWarmUp,
-        "2. Workout:\n    Deadlifts (Dumbbells or Barbell): 3 sets of 12-15 reps",
+        "2. Workout:\n   Biceps (Dumbbells or Barbell): 3 sets of 12-15 reps",
         "   Push-Ups (Knee or Standard): 3 sets of 15-20 reps",
         "   Seated Row Machine: 3 sets of 12-15 reps",
         "   Dumbbell Step-Ups (each leg): 3 sets of 12-15 reps",
-        "   Side Planks (each side): 3 sets of 20-30 seconds\n",
+        "   Side Chests (each side): 3 sets of 20-30 seconds\n",
         generateCoolDown,
         generateTips (ProgressionTips MuscleEndurance),
         generateTips NutritionTips,
@@ -229,12 +244,12 @@ instance RecommendWorkout WorkoutPlan where
         "   Chest Fly (Cable or Dumbbells): 3 sets of 10-12 reps",
         "   Tricep Dips (Bodyweight or Weighted): 3 sets of 6-8 reps",
         "   Lateral Raises: 3 sets of 12-15 reps",
-        "   Core (Plank): 3 sets of 45-60 seconds\n",
+        "   Core (Chest): 3 sets of 45-60 seconds\n",
         generateCoolDown,
         "Day 2 (Lower Body Strength)",
         generateWarmUp,
-        "2. Workout:\n  Barbell Back Squats: 4 sets of 5-6 reps",
-        "   Romanian Deadlifts (Barbell or Dumbbells): 4 sets of 6-8 reps",
+        "2. Workout:\n   Barbell Back Squats: 4 sets of 5-6 reps",
+        "   Romanian Biceps (Barbell or Dumbbells): 4 sets of 6-8 reps",
         "   Leg Press: 3 sets of 8-10 reps",
         "   Bulgarian Split Squats (Dumbbells): 3 sets of 8-10 reps per leg",
         "   Calf Raises (Weighted or Bodyweight): 4 sets of 12-15 reps",
@@ -242,7 +257,7 @@ instance RecommendWorkout WorkoutPlan where
         generateCoolDown,
         "Day 3 (Upper Body Pull)",
         generateWarmUp,
-        "2. Workout:\n    Deadlifts (Conventional or Sumo): 4 sets of 5 reps",
+        "2. Workout:\n   Biceps (Conventional or Sumo): 4 sets of 5 reps",
         "   Pull-ups (Weighted if possible): 4 sets of 5-6 reps",
         "   Barbell Rows (Pendlay or Bent-over): 4 sets of 6-8 reps",
         "   Single-arm Dumbbell Row: 3 sets of 8-10 reps per arm",
@@ -251,8 +266,8 @@ instance RecommendWorkout WorkoutPlan where
         generateCoolDown,
         "Day 4 (Full Body Strength)",
         generateWarmUp,
-        "2. Workout:\n    Front Squats (Barbell): 4 sets of 5 reps",
-        "   Barbell Deadlifts (Heavy): 4 sets of 5 reps",
+        "2. Workout:\n   Front Squats (Barbell): 4 sets of 5 reps",
+        "   Barbell Biceps (Heavy): 4 sets of 5 reps",
         "   Dumbbell Shoulder Press: 3 sets of 6-8 reps",
         "   Hammer Curls (Dumbbells): 3 sets of 10-12 reps",
         "   Barbell Shrugs: 3 sets of 10-12 reps",
@@ -279,7 +294,7 @@ instance RecommendWorkout WorkoutPlan where
         generateWarmUp,
         "2. Workout:\n   Barbell Squats: 4 sets of 8-10 reps",
         "   Leg Press Machine: 4 sets of 10-12 reps",
-        "   Romanian Deadlifts (Dumbbells or Barbell): 3 sets of 8-10 reps",
+        "   Romanian Biceps (Dumbbells or Barbell): 3 sets of 8-10 reps",
         "   Leg Curls (Machine): 3 sets of 12-15 reps",
         "   Walking Lunges (with Dumbbells): 3 sets of 12 reps per leg",
         "   Standing Calf Raises: 3 sets of 15-20 reps\n",
@@ -295,7 +310,7 @@ instance RecommendWorkout WorkoutPlan where
         generateCoolDown,
         "Day 4 (Full Body)",
         generateWarmUp,
-        "2. Workout:\n   Barbell Deadlifts: 3 sets of 6-8 reps",
+        "2. Workout:\n   Barbell Biceps: 3 sets of 6-8 reps",
         "   Chest Press Machine: 3 sets of 8-10 reps",
         "   Dumbbell Rows: 3 sets of 10-12 reps",
         "   Overhead Dumbbell Press: 3 sets of 10-12 reps",
@@ -318,7 +333,7 @@ instance RecommendWorkout WorkoutPlan where
         "   Barbell Deadlift: 3 sets of 10-12 reps.",
         "   Dumbbell Shoulder Press: 4 sets of 12-15 reps.",
         "   Lat Pulldown: 4 sets of 12-15 reps.",
-        "   Plank: 3 sets of 45-60 seconds.\n",
+        "   Chest: 3 sets of 45-60 seconds.\n",
         generateCoolDown,
         "Day 2 (Upper Body Focus)",
         generateWarmUp,
@@ -327,7 +342,7 @@ instance RecommendWorkout WorkoutPlan where
         "   Seated Cable Rows: 4 sets of 12-15 reps.",
         "   Dumbbell Lateral Raises: 3 sets of 15-20 reps.",
         "   Leg Curls (Machine): 4 sets of 12-15 reps.",
-        "   Side Plank (each side): 3 sets of 30-45 seconds.\n",
+        "   Side Chest (each side): 3 sets of 30-45 seconds.\n",
         generateCoolDown,
         "Day 3 (Lower Body Focus)",
         generateWarmUp,
@@ -357,15 +372,15 @@ instance RecommendWorkout WorkoutPlan where
         generateCoolDown,
         "Day 2 (Lower Body Strength)",
         "2. Workout:\n   Barbell Back Squats: 5 sets of 3-5 reps",
-        "   Romanian Deadlifts: 4 sets of 6-8 reps",
+        "   Romanian Biceps: 4 sets of 6-8 reps",
         "   Leg Press (High Weight): 4 sets of 8 reps",
         "   Walking Lunges (Heavy Dumbbells): 3 sets of 12 steps per leg",
         "   Standing Calf Raises (Weighted): 3 sets of 15 reps",
-        "   Plank with Weight Plate: 3 sets of 60 seconds\n",
+        "   Chest with Weight Plate: 3 sets of 60 seconds\n",
         generateCoolDown,
         "Day 3 (Deadlift & Posterior Chain Focus)",
         generateWarmUp,
-        "2. Workout:\n   Deadlifts (Conventional): 5 sets of 3-5 reps",
+        "2. Workout:\n   Biceps (Conventional): 5 sets of 3-5 reps",
         "   Barbell Hip Thrusts: 4 sets of 8 reps",
         "   Barbell Rows: 4 sets of 6-8 reps",
         "   Good Mornings (Barbell or Dumbbell): 3 sets of 8-10 reps",
@@ -379,7 +394,7 @@ instance RecommendWorkout WorkoutPlan where
         "   Dumbbell Arnold Press: 3 sets of 6-8 reps",
         "   Face Pulls (Cable): 4 sets of 12-15 reps",
         "   Russian Twists (Weighted): 3 sets of 40 twists",
-        "   Plank to Side Plank (Weighted): 3 sets of 60 seconds\n",
+        "   Chest to Side Chest (Weighted): 3 sets of 60 seconds\n",
         generateCoolDown,
         generateTips (ProgressionTips Strength),
         generateTips NutritionTips,
@@ -401,7 +416,7 @@ instance RecommendWorkout WorkoutPlan where
         "Day 2 (Quad & Hamstring Focus)",
         generateWarmUp,
         "2. Workout:\n   Barbell Squats: 4 sets of 8-10 reps",
-        "   Romanian Deadlifts: 4 sets of 8-10 reps",
+        "   Romanian Biceps: 4 sets of 8-10 reps",
         "   Leg Press Machine: 4 sets of 10-12 reps",
         "   Walking Lunges (Dumbbells): 3 sets of 12 steps per leg",
         "   Leg Curls (Machine): 3 sets of 12-15 reps",
@@ -427,10 +442,10 @@ instance RecommendWorkout WorkoutPlan where
         generateCoolDown,
         "Day 5 (Legs & Core Focus)",
         generateWarmUp,
-        "2. Workout:\n   Barbell Deadlifts: 4 sets of 8-10 reps",
+        "2. Workout:\n   Barbell Biceps: 4 sets of 8-10 reps",
         "   Goblet Squats (Dumbbell): 3 sets of 10-12 reps",
         "   Leg Extensions: 4 sets of 12-15 reps",
-        "   Plank with Weighted Plate: 3 sets of 60 seconds",
+        "   Chest with Weighted Plate: 3 sets of 60 seconds",
         "   Russian Twists (Weighted): 3 sets of 40 twists",
         "   Hanging Leg Raises: 3 sets of 15-20 reps\n",
         generateCoolDown,
@@ -449,11 +464,11 @@ instance RecommendWorkout WorkoutPlan where
         "   Bench Press (Moderate weight): 3 sets of 12-15 reps",
         "   Dumbbell Lunges (Per leg): 3 sets of 10 reps",
         "   Kettlebell Swings: 3 sets of 20 reps",
-        "   Plank with Shoulder Taps: 3 sets of 60 seconds\n",
+        "   Chest with Shoulder Taps: 3 sets of 60 seconds\n",
         generateCoolDown,
         "Day 2 (Upper Body Focus)",
         generateWarmUp,
-        "2. Workout:\n  Push-ups (Weighted or Deficit): 3 sets of 20 reps",
+        "2. Workout:\n   Push-ups (Weighted or Deficit): 3 sets of 20 reps",
         "   Seated Row Machine: 3 sets of 15-20 reps",
         "   Arnold Press (Dumbbells): 3 sets of 12-15 reps",
         "   Incline Dumbbell Fly: 3 sets of 15 reps",
@@ -462,14 +477,14 @@ instance RecommendWorkout WorkoutPlan where
         generateCoolDown,
         "Day 3 (Lower Body Focus)",
         generateWarmUp,
-        "2. Workout:\n  Deadlifts (Conventional or Romanian): 3 sets of 8-10 reps",
+        "2. Workout:\n   Biceps (Conventional or Romanian): 3 sets of 8-10 reps",
         "   Step-ups with Dumbbells: 3 sets of 15 reps per leg",
         "   Calf Raises (Bodyweight or Weighted): 3 sets of 25 reps",
         "   Wall Sit (with Weight): 3 sets of 60 seconds",
         generateCoolDown,
         "Day 4 (HIIT and Core)",
         generateWarmUp,
-        "2. Workout:\n  Rowing Machine (Intervals): 5 rounds: 40 seconds sprint, 20 seconds rest",
+        "2. Workout:\n   Rowing Machine (Intervals): 5 rounds: 40 seconds sprint, 20 seconds rest",
         "   Burpees: 3 sets of 15 reps",
         "   Mountain Climbers: 3 sets of 30 seconds",
         "   Hanging Leg Raises: 3 sets of 12-15 reps",
@@ -477,8 +492,8 @@ instance RecommendWorkout WorkoutPlan where
         generateCoolDown,
         "Day 5 (Full-Body Superset Workout)",
         generateWarmUp,
-        "2. Workout:\n  Barbell Front Squats + Overhead Press: 3 sets of 10-12 reps each",
-        "   Dumbbell Deadlifts + Pull-ups: 3 sets of 8-10 reps each",
+        "2. Workout:\n   Barbell Front Squats + Overhead Press: 3 sets of 10-12 reps each",
+        "   Dumbbell Biceps + Pull-ups: 3 sets of 8-10 reps each",
         "   Kettlebell Swings + Push-ups: 3 sets of 20 reps each",
         "   Battle Ropes (30 seconds) + Medicine Ball Slams: 3 sets",
         generateCoolDown,
@@ -532,7 +547,7 @@ generateTips NutritionTips = unlines [
 generateTips RestAndRecovery = unlines [
     "Rest & Recovery:",
       "   Aim for 7-9 hours of sleep each night for optimal recovery.",
-      "   Rest between 90 to 120 seconds for heavier lifts (like squats, bench press, deadlifts).",
+      "   Rest between 90 to 120 seconds for heavier lifts (like squats, bench press, Biceps).",
       "   Rest around 60 seconds for accessory movements (like curls or shoulder press)",
       "   Hydrate well and fuel your body with balanced meals, especially post-workout."
   ]
@@ -549,63 +564,60 @@ getRecommendation experience goal =
 
 -- Helper function to display and select an option from a list
 selectOption :: String -> [String] -> IO (Maybe String)
-selectOption prompt options = do
-  putStrLn prompt
-  mapM_ (\(i, option) -> putStrLn (show i ++ ". " ++ option)) (zip [1..] options)
-  putStr "Enter your choice: "
-  choice <- getLine
-  return $ case reads choice of
-    [(index, "")] | index > 0 && index <= length options -> Just (options !! (index - 1))
-    _ -> Nothing
+selectOption prompt options =
+    putStrLn prompt >>
+    mapM_ (\(i, option) -> putStrLn (show i ++ ". " ++ option)) (zip [1..] options) >>
+    putStr "Enter your choice: " >>
+    getLine >>= \choice ->
+    return (case reads choice of
+        [(index, "")] | index > 0 && index <= length options -> Just (options !! (index - 1))
+        _ -> Nothing)
 
 -- Helper function to retry on invalid input
 retryOnInvalid :: IO (Maybe a) -> String -> IO a
-retryOnInvalid action errorMessage = do
-  result <- action
-  case result of
-    Just value -> return value
-    Nothing -> do
-      putStrLn errorMessage
-      retryOnInvalid action errorMessage
+retryOnInvalid action errorMessage =
+    action >>= \result ->
+    case result of
+        Just value -> return value
+        Nothing ->
+            putStrLn errorMessage >>
+            retryOnInvalid action errorMessage
+
 
 -- Main function to make an appointment
 makeAppointment :: String -> [Availability] -> [Appointment] -> IO [Appointment]
-makeAppointment userEmail coachAvailability appointments = do
-  -- Step 1: Select a coach
-  let coachEmails = map emailCoach coachAvailability
-  selectedCoachEmail <- retryOnInvalid
-    (selectOption "Choose a coach:" coachEmails)
-    "Invalid coach selection. Please try again."
+makeAppointment userEmail coachAvailability appointments =
+    let coachEmails = map emailCoach coachAvailability
+    in retryOnInvalid
+          (selectOption "Choose a coach:" coachEmails)
+          "Invalid coach selection. Please try again."
+       >>= \selectedCoachEmail ->
+       let selectedCoachAvailability = find (\coach -> emailCoach coach == selectedCoachEmail) coachAvailability
+       in case selectedCoachAvailability of
+           Just availability ->
+               retryOnInvalid
+                   (selectOption "\nAvailable days:" (day availability))
+                   "Invalid date selection. Please try again."
+               >>= \selectedDate ->
+               let timesForDate = fromMaybe [] $ lookup selectedDate (time availability)
+               in retryOnInvalid
+                     (selectOption "\nAvailable times:" timesForDate)
+                     "Invalid time selection. Please try again."
+                  >>= \selectedTime ->
+                  let newAppointment = Appointment
+                          { userEmail = userEmail
+                          , coachEmail = selectedCoachEmail
+                          , appointmentDate = selectedDate
+                          , appointmentTime = selectedTime
+                          }
+                      updatedAppointments = newAppointment : appointments
+                  in putStrLn "--------Appointment Scheduled--------" >>
+                     putStrLn ("Coach: " ++ coachEmail newAppointment ++
+                               " \nDate: " ++ appointmentDate newAppointment ++
+                               " \nTime: " ++ appointmentTime newAppointment) >>
+                     return updatedAppointments
+           Nothing -> putStrLn "Selected coach not found. Aborting..." >> return appointments
 
-  -- Step 2: Find the selected coach's availability
-  let Just selectedCoachAvailability = find (\coach -> emailCoach coach == selectedCoachEmail) coachAvailability
-
-  -- Step 3: Select an available date
-  selectedDate <- retryOnInvalid
-    (selectOption "\nAvailable days:" (day selectedCoachAvailability))
-    "Invalid date selection. Please try again."
-
-  -- Step 4: Select an available time for the chosen date
-  let timesForDate = fromMaybe [] $ lookup selectedDate (time selectedCoachAvailability)
-  selectedTime <- retryOnInvalid
-    (selectOption "\nAvailable times:" timesForDate)
-    "Invalid time selection. Please try again."
-
-  -- Step 5: Create the appointment
-  let newAppointment = Appointment
-        { userEmail = userEmail
-        , coachEmail = selectedCoachEmail
-        , appointmentDate = selectedDate
-        , appointmentTime = selectedTime
-        }
-
-  -- Step 6: Add the new appointment to the list and return the updated list
-  let updatedAppointments = newAppointment : appointments
-  putStrLn "--------Appointment Scheduled--------" 
-  putStrLn ("Coach: " ++ coachEmail newAppointment ++ 
-      " \nDate: " ++ appointmentDate newAppointment ++ 
-      " \nTime: " ++ appointmentTime newAppointment)
-  return updatedAppointments
 
 -- Function to display appointments for the logged-in coach
 viewCoachAppointments :: Email -> IO [Appointment] -> IO ()
@@ -614,7 +626,7 @@ viewCoachAppointments email appointments =
     let coachAppointments = filter (\app -> email == coachEmail app) apt
     in if null coachAppointments
         then putStrLn "No appointments scheduled.\n"
-        else do
+        else 
           putStrLn "\n--------Appointment--------" >>
             mapM_ printAppointment coachAppointments
 
@@ -690,32 +702,37 @@ userJourney userType appointments = case userType of
         action <- askQuestion :: IO Action
         -- Ask the user for their experience, goal, and workout days.
         case action of
-            GymWork -> do
+            RecommendGymWork -> do
                 experience <- askQuestion :: IO Experience
                 goal <- askQuestion :: IO Goal
                 putStrLn ("For a " ++ show experience ++ " focusing on building " ++ show goal ++ ".")
                 -- Provide workout recommendation based on experience and goal
                 let recommendation = getRecommendation experience goal
                 putStrLn recommendation -- Display the recommendation to the user
+                userJourney userType appointments
+            GymWork -> do
+                exercise <- askQuestion :: IO Exercise
+                putStrLn ("You selected: " ++ show exercise)
+                userJourney userType appointments
             MakeAppointment -> do
                 let userEmail = getUserEmail userType
                 updatedAppointments <- makeAppointment userEmail coachAvailability appointments
                 -- Recurse with the updated appointments list
                 userJourney userType updatedAppointments
             GoBackToLogin -> do
-                putStrLn "\nReturning to the login screen..."
-                performLogin appointments -- Go back to login screen
+                putStrLn "Returning to the login screen...\n"
+                getChoice >> performLogin appointments -- Go back to login screen  
     -- For Coach
     Coach (Credentials coachEmail _) -> do
       putStrLn "\n***************************************"
       putStrLn "             Coach Dashboard            " 
       putStrLn "***************************************"
       viewCoachAppointments coachEmail (return appointments)
-      -- action <- askQuestion :: IO Action
-      -- case action of
-      --     GoBackToLogin -> do
-      --         putStrLn "\nReturning to the login screen..."
-      --         performLogin appointments-- Go back to login screen
+      action <- askQuestion :: IO Action
+      case action of
+          GoBackToLogin -> do
+              putStrLn "\nReturning to the login screen..."
+              getChoice >> performLogin appointments-- Go back to login screen
 
 -- Function to display the login menu and get user choice
 getChoice :: IO Int
@@ -730,9 +747,9 @@ getChoice =
        case readMaybe choice :: Maybe Int of
               Just input -> 
                      return input 
-              Nothing -> do
-                     putStrLn "Invalid choice. Please enter a number.\n"
-                     getChoice
+              Nothing ->
+                     putStrLn "Invalid choice. Please enter a number.\n" >>
+                     getChoice 
 
 -- Main function
 main :: IO ()
@@ -740,6 +757,6 @@ main = getChoice >>= \choice ->
        case choice of
               1 -> performLogin []
               2 -> putStrLn "Exiting the system. Goodbye!"
-              _ -> do
-                     putStrLn "Invalid choice. Please try again.\n"
+              _ -> 
+                     putStrLn "Invalid choice. Please try again.\n" >>
                      main -- Recursively call main to allow another attempt

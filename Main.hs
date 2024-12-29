@@ -34,12 +34,20 @@ data WorkoutRecommend = WorkoutRecommend
   , goal :: Goal
   } deriving (Show)
 
+-- Data type for log entry
+data LogEntry = LogEntry
+  { workoutName :: String
+  , workoutDate :: String
+  , sets :: Int
+  , reps :: Int
+  } deriving (Show, Read)
+
 -- The first String is the workout name, and the second String is a brief description.
 data Workout = Workout WorkOutName Description deriving (Show, Read) 
 
 -- Define the UserType data type that uses the Credentials type
 data UserType = User Credentials | Coach Credentials deriving (Show)
-data Action = RecommendGymWork | GymWork | MakeAppointment | GoBackToLogin deriving (Show, Read) -- Read typeclass is used to convert string to
+data Action = RecommendGymWork | GymWork | MakeAppointment | ViewLog | GoBackToLogin deriving (Show, Read) -- Read typeclass is used to convert string to
 data Exercise = Abs | Back | Biceps | Calf | Chest | Forearms | Legs | Shoulders | Triceps deriving (Show, Read) -- Read typeclass is used to convert string to
 data Experience = Beginner | Intermediate | Advanced deriving (Show, Read) -- Read typeclass is used to convert string to
 data Goal = Strength | MuscleSize | MuscleEndurance deriving (Show, Read) -- Read typeclass is used to convert string to
@@ -97,7 +105,8 @@ instance Question Action where
                         [("1", RecommendGymWork, "Recommend GymWork"),
                          ("2", GymWork, "GymWork"),
                          ("3", MakeAppointment, "MakeAppointment"),
-                         ("4", GoBackToLogin, "GoBackToLogin")
+                         ("4", ViewLog, "ViewLog"),
+                         ("5", GoBackToLogin, "GoBackToLogin")
                          ]
 
 instance Question Exercise where
@@ -641,7 +650,42 @@ getWorkouts exercise = case exercise of
                   Workout "Cable Tricep Pushdowns" "Attach a rope to a cable machine. Hold the rope with an overhand grip. Push the rope down, extending your arms.\n",
                   Workout "Barbell Tricep" "Hold a barbell with an overhand grip. Extend your arms overhead, then lower the bar behind your head.\n"]
 
+-- Function to log a workout
+logWorkout :: String -> IO LogEntry
+logWorkout workoutName = do
+  putStrLn "Do you want to add this workout to your log? (yes/no)"
+  response <- getLine
+  if response == "yes" then do
+    putStr "Enter the date (format: YYYY-MM-DD):"
+    date <- getLine
+    putStr "Enter the number of sets:"
+    numSets <- readLn
+    putStr "Enter the number of reps per set:"
+    numReps <- readLn
+    let logEntry = LogEntry workoutName date numSets numReps
+    putStrLn "Workout logged!"
+    return logEntry
+  else if response == "no" then do
+    putStrLn "Workout not logged."
+    return (LogEntry workoutName "" 0 0) -- Return an empty log entry if not logged
+  else do
+    putStrLn "Invalid response. Please try again."
+    logWorkout workoutName
 
+-- Function to display the log
+displayLog :: [LogEntry] -> IO ()
+displayLog log = 
+    (if null log
+        then putStrLn "No workouts logged yet."
+        else mapM_ displayLogEntry log) >>= \_ -> return () -- Return after displaying
+
+-- Helper function to display each log entry
+displayLogEntry :: LogEntry -> IO ()
+displayLogEntry (LogEntry name date sets reps) = do
+    putStrLn $ "Workout: " ++ name
+    putStrLn $ "Date: " ++ date
+    putStrLn $ "Sets: " ++ show sets
+    putStrLn $ "Reps: " ++ show reps
 
 -- Helper function to retry on invalid input
 retryOnInvalid :: IO (Maybe a) -> String -> IO a
@@ -743,8 +787,8 @@ validCredentials enteredEmail enteredPassword =
                _ -> Nothing
 
 -- Function to perform login
-performLogin :: [Appointment] -> IO ()
-performLogin apt = 
+performLogin :: [Appointment] -> [LogEntry] -> IO ()
+performLogin apt log = 
        putStrLn "\n***************************************" >>
        putStrLn "     Welcome to the FitGym System      " >>
        putStrLn "***************************************" >>
@@ -757,13 +801,13 @@ performLogin apt =
               Just userType -> 
                      let loginMessage = login userType email password
                      in case loginMessage of
-                            Just message -> putStrLn message >> userJourney userType apt
+                            Just message -> putStrLn message >> userJourney userType apt log
                             Nothing -> putStrLn "Invalid credentials. Please try again."
-              Nothing -> putStrLn "Invalid credentials. Please try again." >> performLogin apt
+              Nothing -> putStrLn "Invalid credentials. Please try again." >> performLogin apt log
 
 -- Function to display user journey based on user type
-userJourney :: UserType -> [Appointment] -> IO ()
-userJourney userType appointments = case userType of
+userJourney :: UserType -> [Appointment] -> [LogEntry] -> IO ()
+userJourney userType appointments log = case userType of
     -- For User
     User _ -> do
         putStrLn "\n***************************************"
@@ -779,7 +823,7 @@ userJourney userType appointments = case userType of
                 -- Provide workout recommendation based on experience and goal
                 let recommendation = getRecommendation experience goal
                 putStrLn recommendation -- Display the recommendation to the user
-                userJourney userType appointments
+                userJourney userType appointments log
             GymWork -> do
                 exercise <- askQuestion :: IO Exercise
                 putStrLn ("You selected: " ++ show exercise)
@@ -788,15 +832,24 @@ userJourney userType appointments = case userType of
                 mapM_ (\(Workout name desc) -> putStrLn $ "- " ++ name ++ ": " ++ desc) workouts
                 workoutChoice <- askGymQuestion "Which workout would you like to perform?" (zipWith (\i (Workout name _) -> (show i, name, name)) [1..] workouts)
                 putStrLn ("You selected workout: " ++ workoutChoice)
-                userJourney userType appointments
+                -- Log the workout
+                logEntry <- logWorkout workoutChoice
+                -- If logEntry is not empty, add it to the log
+                let updatedLog = if workoutName logEntry /= "" then logEntry : log else log
+                userJourney userType appointments updatedLog
+            ViewLog -> do
+                -- Display the workout log
+                displayLog log
+                userJourney userType appointments log
             MakeAppointment -> do
                 let userEmail = getUserEmail userType
                 updatedAppointments <- makeAppointment userEmail coachAvailability appointments
                 -- Recurse with the updated appointments list
-                userJourney userType updatedAppointments
+                userJourney userType updatedAppointments log
+          
             GoBackToLogin -> do
                 putStrLn "Returning to the login screen...\n"
-                getChoice >> performLogin appointments -- Go back to login screen  
+                getChoice >> performLogin appointments log-- Go back to login screen  
     -- For Coach
     Coach (Credentials coachEmail _) -> do
       putStrLn "\n***************************************"
@@ -807,7 +860,7 @@ userJourney userType appointments = case userType of
       case action of
           GoBackToLogin -> do
               putStrLn "\nReturning to the login screen..."
-              getChoice >> performLogin appointments-- Go back to login screen
+              getChoice >> performLogin appointments log-- Go back to login screen
 
 -- Function to display the login menu and get user choice
 getChoice :: IO Int
@@ -830,7 +883,7 @@ getChoice =
 main :: IO ()
 main = getChoice >>= \choice -> 
        case choice of
-              1 -> performLogin []
+              1 -> performLogin [] []
               2 -> putStrLn "Exiting the system. Goodbye!"
               _ -> 
                      putStrLn "Invalid choice. Please try again.\n" >>

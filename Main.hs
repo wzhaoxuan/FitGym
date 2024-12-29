@@ -583,18 +583,6 @@ getRecommendation :: Experience -> Goal -> String
 getRecommendation experience goal =
     recommend (WorkoutRecommend experience goal)
 
--- Helper function to display and select an option from a list
-selectOption :: String -> [String] -> IO (Maybe String)
-selectOption prompt options =
-    putStrLn prompt >>
-    mapM_ (\(i, option) -> putStrLn (show i ++ ". " ++ option)) (zip [1..] options) >>
-    putStr "Enter your choice: " >>
-    getLine >>= \choice ->
-    return (case reads choice of
-        [(index, "")] | index > 0 && index <= length options -> Just (options !! (index - 1))
-        _ -> Nothing)
-
-
 getWorkouts :: Exercise -> [Workout]
 getWorkouts exercise = case exercise of
     Abs       -> [Workout "Hanging Leg Raise" "Hang from a pull-up bar, keeping your body straight. Lift your legs straight towards your chest. Slowly lower them back to the starting position.\n",
@@ -745,24 +733,28 @@ askNumberOfDays = do
             putStrLn "Invalid number of days. Please enter a number between 1 and 7."
             askNumberOfDays  -- Recursively call until valid input is provided
 
--- Helper function to handle the workout selection for a day
 selectWorkouts :: [String] -> IO [String]
-selectWorkouts selectedWorkouts = 
-    askQuestion >>= \exercise ->  -- Ask for exercise
-    let workouts = getWorkouts exercise in
-    putStrLn "Available workouts:" >>
-    zipWithM_ (\i (Workout name _) -> putStrLn (show i ++ ". " ++ name)) [1 ..] workouts >>
-    putStr "Enter the numbers of the workouts you want for this session (comma-separated): " >>
-    getLine >>= \workoutInput ->  -- Get workout input
-    let workoutNumbers = map read (wordsWhen (== ',') workoutInput) in
-    let newWorkouts = [name | i <- workoutNumbers, let (Workout name _) = workouts !! (i - 1)] in
-    let updatedWorkouts = selectedWorkouts ++ newWorkouts in  -- Add new workouts to the list
-    
-    putStr "Would you like to add more exercises for this day? (yes/no): " >>  -- Ask if they want to add more
-    getLine >>= \response ->
-        if response == "yes" 
-        then selectWorkouts updatedWorkouts  -- Recursively call to add more workouts
-        else return updatedWorkouts  -- Return selected workouts when done
+selectWorkouts selectedWorkouts = do
+    exercise <- askQuestion  -- Ask for exercise
+    let workouts = getWorkouts exercise
+        validNumbers = [1 .. length workouts]  -- Valid range of workout numbers
+    putStrLn "Available workouts:"
+    zipWithM_ (\i (Workout name _) -> putStrLn (show i ++ ". " ++ name)) [1 ..] workouts
+    putStr "Enter the numbers of the workouts you want for this session (comma-separated): "
+    workoutInput <- getLine  -- Get workout input
+    let workoutNumbers = map read (wordsWhen (== ',') workoutInput)
+    if all (`elem` validNumbers) workoutNumbers
+      then do
+        let newWorkouts = [name | i <- workoutNumbers, let (Workout name _) = workouts !! (i - 1)]
+            updatedWorkouts = selectedWorkouts ++ newWorkouts  -- Add new workouts to the list
+        putStr "Would you like to add more exercises for this day? (yes/no): "
+        response <- getLine
+        if response == "yes"
+          then selectWorkouts updatedWorkouts  -- Recursively call to add more workouts
+          else return updatedWorkouts  -- Return selected workouts when done
+      else do
+        putStrLn "Invalid workout number(s). Please try again."
+        selectWorkouts selectedWorkouts  -- Retry workout selection
 
 
 -- Helper function to split a string by a delimiter
@@ -818,6 +810,16 @@ makeAppointment userEmail coachAvailability appointments =
                      return updatedAppointments
            Nothing -> putStrLn "Selected coach not found. Aborting..." >> return appointments
 
+-- Helper function to display and select an option from a list
+selectOption :: String -> [String] -> IO (Maybe String)
+selectOption prompt options =
+    putStrLn prompt >>
+    mapM_ (\(i, option) -> putStrLn (show i ++ ". " ++ option)) (zip [1..] options) >>
+    putStr "Enter your choice: " >>
+    getLine >>= \choice ->
+    return (case reads choice of
+        [(index, "")] | index > 0 && index <= length options -> Just (options !! (index - 1))
+        _ -> Nothing)
 
 -- Function to display appointments for the logged-in coach
 viewCoachAppointments :: Email -> IO [Appointment] -> IO ()

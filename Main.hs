@@ -1,11 +1,12 @@
 import Text.Read (readMaybe)
 import Data.Maybe (fromMaybe)
 import Data.List (find)
-import GHC.Event.Windows (updateTimeout)
 
 -- Define the Email, Password, and Description types
 type Email = String
 type Password = String
+type WorkOutName = String
+type Description = String
 
 -- Define the Credentials data type that holds email, password, and description
 data Credentials = Credentials
@@ -28,10 +29,13 @@ data Availability = Availability
   } deriving (Show)
 
 -- Define a data type for users with their workout recommendation
-data WorkoutPlan = WorkoutPlan
+data WorkoutRecommend = WorkoutRecommend
   { experience :: Experience
   , goal :: Goal
   } deriving (Show)
+
+-- The first String is the workout name, and the second String is a brief description.
+data Workout = Workout WorkOutName Description deriving (Show, Read) 
 
 -- Define the UserType data type that uses the Credentials type
 data UserType = User Credentials | Coach Credentials deriving (Show)
@@ -126,9 +130,9 @@ instance Question Goal where
 class RecommendWorkout a where
     recommend :: a -> String
 
--- Implement the RecommendWorkout instance for the WorkoutPlan type
-instance RecommendWorkout WorkoutPlan where
-    recommend (WorkoutPlan Beginner Strength) = unlines[
+-- Implement the RecommendWorkout instance for the WorkoutRecommend type
+instance RecommendWorkout WorkoutRecommend where
+    recommend (WorkoutRecommend Beginner Strength) = unlines[
        "Workout days per week: 3",
         "***3-Day Workout Plan (Full Body)***",
         "Day 1",
@@ -163,7 +167,7 @@ instance RecommendWorkout WorkoutPlan where
         generateTips RestAndRecovery,
         generateTips ExerciseAlternatives]
 
-    recommend (WorkoutPlan Beginner MuscleSize) = unlines[
+    recommend (WorkoutRecommend Beginner MuscleSize) = unlines[
        "Workout days per week: 3",
         "***3-Day Workout Plan (Full Body Split for Hypertrophy)***",
         "Day 1",
@@ -201,7 +205,7 @@ instance RecommendWorkout WorkoutPlan where
         generateTips RestAndRecovery,
         generateTips ExerciseAlternatives]
 
-    recommend (WorkoutPlan Beginner MuscleEndurance) = unlines[
+    recommend (WorkoutRecommend Beginner MuscleEndurance) = unlines[
       "Workout days per week: 3",
         "***3-Day Workout Plan (Muscle Endurance Focus)***",
         "Day 1",
@@ -233,7 +237,7 @@ instance RecommendWorkout WorkoutPlan where
         generateTips RestAndRecovery,
         generateTips ExerciseAlternatives]
     
-    recommend (WorkoutPlan Intermediate Strength) = unlines[
+    recommend (WorkoutRecommend Intermediate Strength) = unlines[
       "Workout days per week: 4",
         "***4-Day Workout Plan (Muscle Endurance Focus)***",
         "Day 1 (Upper Body Push)",
@@ -278,7 +282,7 @@ instance RecommendWorkout WorkoutPlan where
         generateTips RestAndRecovery,
         generateTips ExerciseAlternatives]
 
-    recommend (WorkoutPlan Intermediate MuscleSize) = unlines[
+    recommend (WorkoutRecommend Intermediate MuscleSize) = unlines[
       "Workout days per week: 4",
         "***4-Day Workout Plan (Muscle Endurance Focus)***",
         "Day 1 (Chest, Shoulders, Triceps)",
@@ -323,7 +327,7 @@ instance RecommendWorkout WorkoutPlan where
         generateTips RestAndRecovery,
         generateTips ExerciseAlternatives]
     
-    recommend (WorkoutPlan Intermediate MuscleEndurance) = unlines[
+    recommend (WorkoutRecommend Intermediate MuscleEndurance) = unlines[
       "Workout days per week: 3",
         "***3-Day Workout Plan (Muscle Endurance Focus)***",
         "Day 1 (Full Body Circuit)",
@@ -358,7 +362,7 @@ instance RecommendWorkout WorkoutPlan where
         generateTips RestAndRecovery,
         generateTips ExerciseAlternatives]
 
-    recommend (WorkoutPlan Advanced Strength) = unlines[
+    recommend (WorkoutRecommend Advanced Strength) = unlines[
         "Workout days per week: 4",
         "***4-Day Workout Plan (Upper Body Strength)***",
         "Day 1 (Push-Pull Focus)",
@@ -383,7 +387,6 @@ instance RecommendWorkout WorkoutPlan where
         "2. Workout:\n   Biceps (Conventional): 5 sets of 3-5 reps",
         "   Barbell Hip Thrusts: 4 sets of 8 reps",
         "   Barbell Rows: 4 sets of 6-8 reps",
-        "   Good Mornings (Barbell or Dumbbell): 3 sets of 8-10 reps",
         "   Pull-throughs (Cable or Resistance Band): 3 sets of 12-15 reps",
         "   Hanging Leg Raises: 3 sets of 12-15 reps\n",
         generateCoolDown,
@@ -401,7 +404,7 @@ instance RecommendWorkout WorkoutPlan where
         generateTips RestAndRecovery,
         generateTips ExerciseAlternatives]
 
-    recommend (WorkoutPlan Advanced MuscleSize) = unlines[
+    recommend (WorkoutRecommend Advanced MuscleSize) = unlines[
       "Workout days per week: 5",
         "***5-Day Workout Plan (Muscle Endurance Focus)***",
         "Day 1 (Push-Pull Focus)",
@@ -454,7 +457,7 @@ instance RecommendWorkout WorkoutPlan where
         generateTips RestAndRecovery,
         generateTips ExerciseAlternatives]
 
-    recommend (WorkoutPlan Advanced MuscleEndurance) = unlines[
+    recommend (WorkoutRecommend Advanced MuscleEndurance) = unlines[
       "Workout days per week: 5",
         "***5-Day Workout Plan (Muscle Endurance Focus)***",
         "Day 1 (Full-Body Circuit)",
@@ -560,7 +563,7 @@ generateTips ExerciseAlternatives = unlines [
 -- Helper function to get the workout recommendation based on user experience and goal
 getRecommendation :: Experience -> Goal -> String
 getRecommendation experience goal =
-    recommend (WorkoutPlan experience goal)
+    recommend (WorkoutRecommend experience goal)
 
 -- Helper function to display and select an option from a list
 selectOption :: String -> [String] -> IO (Maybe String)
@@ -572,6 +575,73 @@ selectOption prompt options =
     return (case reads choice of
         [(index, "")] | index > 0 && index <= length options -> Just (options !! (index - 1))
         _ -> Nothing)
+
+
+getWorkouts :: Exercise -> [Workout]
+getWorkouts exercise = case exercise of
+    Abs       -> [Workout "Hanging Leg Raise" "Hang from a pull-up bar, keeping your body straight. Lift your legs straight towards your chest. Slowly lower them back to the starting position.\n",
+                  Workout "Russian Twists" "Sit on the floor with your knees bent and feet lifted. Hold a weight or medicine ball with both hands. Twist your torso to the right, then to the left, while balancing on your glutes.\n",
+                  Workout "Core Twist" "Stand with your feet shoulder-width apart. Hold a weight or medicine ball with both hands. Twist your torso to the right, then to the left, keeping your core engaged.\n",
+                  Workout "Leg Raises" "Lie on your back with your legs straight. Lift your legs towards the ceiling, keeping them straight. Slowly lower them back down without touching the floor.\n"]
+
+    Back      -> [Workout "Seated Row Machine" "Sit at the machine with your chest against the pad. Grasp the handles with an overhand grip. Pull the handles towards your torso, squeezing your shoulder blades.\n",
+                  Workout "Lat Pulldowns" "Sit at the machine with your knees secured. Grasp the bar with a wide grip. Pull the bar down to your chest, keeping your back straight.\n",
+                  Workout "Single-arm Dumbbell Row" "Place one knee and hand on a bench. Hold a dumbbell in the opposite hand. Pull the dumbbell towards your hip, keeping your back flat.\n",
+                  Workout "Pull-throughs" "Attach a rope to a cable machine. Face away from the machine, holding the rope between your legs. Hinge at the hips and pull the rope through.\n",
+                  Workout "Barbell Back Squats" "Place a barbell on your upper back. Stand with your feet shoulder-width apart. Squat down, keeping your chest up and back straight. Push through your heels to stand back up.\n",
+                  Workout "Face Pulls" "Attach a rope to a cable machine at face height with a rope attachment. Pull the rope towards your face, squeezing your upper back and rear delts.\n",
+                  Workout "Barbell Rows" "Hold a barbell with an overhand grip. Bend at the hips and knees, keeping your back flat. Pull the bar towards your torso, squeezing your shoulder blades.\n",
+                  Workout "Seated Cable Rows" "Sit at the machine with your knees bent. Grasp the handles with a neutral grip. Pull the handles towards your torso, squeezing your shoulder blades.\n"]
+
+    Biceps    -> [Workout "Dumbbell Bicep Curls" "Stand with a dumbbell in each hand. Curl the weights towards your shoulders, keeping your elbows close to your sides.\n",
+                  Workout "Barbell Biceps" "Hold a barbell with an underhand grip. Curl the bar towards your shoulders, keeping your elbows close to your sides.\n",
+                  Workout "Hammer Curls" "Hold a dumbbell in each hand with your palms facing each other. Curl the weights towards your shoulders, keeping your elbows close to your sides.\n",
+                  Workout "EZ Bar Curls" "Hold an EZ bar with an underhand grip. Curl the bar towards your shoulders, keeping your elbows close to your sides.\n",
+                  Workout "Dumbbell Biceps" "Hold a dumbbell in each hand with your palms facing up. Curl the weights towards your shoulders, keeping your elbows close to your sides.\n",
+                  Workout "Biceps (Conventional)" "Hold a barbell with an underhand grip. Curl the bar towards your shoulders, keeping your elbows close to your sides.\n",
+                  Workout "Barbell Biceps" "Hold a barbell with an underhand grip. Curl the bar towards your shoulders, keeping your elbows close to your sides.\n"]
+
+    Calf      -> [Workout "Standing Calf Raises" "Stand on a block or step with your heels hanging off. Raise your heels as high as possible, then lower them below the step.\n",
+                  Workout "Seated Calf Raises" "Sit on a bench with a weight on your knees. Place the balls of your feet on a block. Raise your heels as high as possible, then lower them below the block.\n",
+                  Workout "Calf Raises" "Stand on the edge of a step or block. Raise your heels as high as possible, then lower them below the step.\n"]
+
+    Chest     -> [Workout "Barbell Bench Press" "Lie on a bench with a barbell above your chest. Lower the bar to your chest, then press it back up.\n",
+                  Workout "Dumbbell Chest Press" "Lie on a bench with a dumbbell in each hand. Lower the weights to your chest, then press them back up.\n",
+                  Workout "Chest Fly (Cable or Dumbbells)" "Lie on a bench with a dumbbell in each hand. Open your arms wide, then bring the weights together over your chest.\n",
+                  Workout "Incline Dumbbell Press" "Lie on an incline bench with a dumbbell in each hand. Lower the weights to your chest, then press them back up.\n",
+                  Workout "Barbell Squats" "Stand with your feet shoulder-width apart. Squat down, keeping your chest up and back straight. Push through your heels to stand back up.\n",
+                  Workout "Push-Ups" "Start in a plank position with your hands under your shoulders. Lower your chest to the floor, then push back up.\n",
+                  Workout "Chest Press Machine" "Sit at the machine with your back against the pad. Push the handles forward, extending your arms.\n"]
+
+    Forearms  -> [Workout "Barbell Shrugs" "Hold a barbell with an overhand grip. Shrug your shoulders towards your ears, then lower them back down.\n",
+                  Workout "Dumbbel Front Raises" "Stand with a dumbbell in each hand. Raise the weights in front of you to shoulder height, then lower them back down.\n",
+                  Workout "Reverse Wrist Curls" "Sit on a bench with a dumbbell in each hand. Curl the weights towards your body, then lower them back down.\n"]
+
+    Legs      -> [Workout "Barbell Squats" "Stand with your feet shoulder-width apart. Squat down, keeping your chest up and back straight. Push through your heels to stand back up.\n",
+                  Workout "Deadlifts" "Stand with your feet hip-width apart. Hinge at the hips and bend your knees to lower the barbell to the floor. Stand back up, pushing through your heels.\n",
+                  Workout "Dumbbel Lunges" "Stand with a dumbbell in each hand. Step forward with one leg and lower your body until both knees are bent at a 90-degree angle. Push back up to the starting position.\n",
+                  Workout "Leg Press Machine" "Sit at the machine with your feet shoulder-width apart. Push the platform away from you, extending your legs.\n",
+                  Workout "Leg Curls (Machine)" "Lie face down on the machine with your legs straight. Curl your legs towards your glutes, then lower them back down.\n",
+                  Workout "Walking Lunges" "Step forward with one leg and lower your body until both knees are bent at a 90-degree angle. Push back up and step forward with the other leg.\n",
+                  Workout "Bulgarian Split Squats" "Stand with one foot on a bench behind you. Lower your body until your front thigh is parallel to the floor. Push back up to the starting position.\n",
+                  Workout "Leg Extensions" "Sit at the machine with your knees bent. Extend your legs, lifting the weight with your quads.\n",
+                  Workout "Goblet Squats" "Hold a dumbbell or kettlebell at chest height. Squat down, keeping your chest up and back straight. Push through your heels to stand back up.\n",
+                  Workout "Romanian Biceps" "Stand with a barbell or dumbbells in front of your thighs. Hinge at the hips and lower the weight towards the floor. Stand back up, pushing through your heels.\n"]
+
+    Shoulders -> [Workout "Dumbbell Shoulder Press" "Sit on a bench with a dumbbell in each hand. Press the weights overhead, extending your arms.\n",
+                  Workout "Overhead Press (Barbell)" "Stand with a barbell on your upper chest. Press the bar overhead, extending your arms.\n",
+                  Workout "Dumbbell Lateral Raises" "Stand with a dumbbell in each hand. Raise the weights out to the sides to shoulder height, then lower them back down.\n",
+                  Workout "Arnold Press (Dumbbells)" "Sit on a bench with a dumbbell in each hand. Press the weights overhead while rotating your palms.\n",
+                  Workout "Dumbbell Rows" "Hold a dumbbell in each hand with your palms facing each other. Row the weights towards your torso, squeezing your shoulder blades.\n",
+                  Workout "Rear Delt Fly (Cable or Dumbbells)" "Stand with a dumbbell in each hand. Raise the weights out to the sides and slightly back, then lower them back down.\n",
+                  Workout "Latera Raises" "Stand with a dumbbell in each hand. Raise the weights out to the sides to shoulder height, then lower them back down.\n"]
+                  
+    Triceps   -> [Workout "Tricep Pushdowns (Cable)" "Attach a rope to a cable machine. Hold the rope with an overhand grip. Push the rope down, extending your arms.\n",
+                  Workout "Tricep Dips" "Hold onto parallel bars with your arms straight. Lower your body by bending your elbows, then push back up.\n",
+                  Workout "Cable Tricep Pushdowns" "Attach a rope to a cable machine. Hold the rope with an overhand grip. Push the rope down, extending your arms.\n",
+                  Workout "Barbell Tricep" "Hold a barbell with an overhand grip. Extend your arms overhead, then lower the bar behind your head.\n"]
+
+
 
 -- Helper function to retry on invalid input
 retryOnInvalid :: IO (Maybe a) -> String -> IO a
@@ -713,6 +783,11 @@ userJourney userType appointments = case userType of
             GymWork -> do
                 exercise <- askQuestion :: IO Exercise
                 putStrLn ("You selected: " ++ show exercise)
+                let workouts = getWorkouts exercise
+                putStrLn "Available workouts:"
+                mapM_ (\(Workout name desc) -> putStrLn $ "- " ++ name ++ ": " ++ desc) workouts
+                workoutChoice <- askGymQuestion "Which workout would you like to perform?" (zipWith (\i (Workout name _) -> (show i, name, name)) [1..] workouts)
+                putStrLn ("You selected workout: " ++ workoutChoice)
                 userJourney userType appointments
             MakeAppointment -> do
                 let userEmail = getUserEmail userType

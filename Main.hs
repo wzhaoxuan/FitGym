@@ -1,5 +1,5 @@
 import Text.Read (readMaybe)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isJust, fromJust)
 import Data.List (find, sortBy, groupBy)
 import Data.Function (on)
 import Control.Monad (zipWithM_)
@@ -48,6 +48,7 @@ data LogEntry = LogEntry
 data GymWorkPlan = GymWorkPlan
   { planName :: String
   , numberOfDays :: Int  -- Days the user wants to work out
+  , workoutSchedule :: [(String, [String])]  -- (Day, [Workout])
   } deriving (Show, Read)
 
 -- The first String is the workout name, and the second String is a brief description.
@@ -55,7 +56,7 @@ data Workout = Workout WorkOutName Description deriving (Show, Read)
 
 -- Define the UserType data type that uses the Credentials type
 data UserType = User Credentials | Coach Credentials deriving (Show)
-data Action = RecommendGymWork | GymWork | MakeAppointment |  CustomPlan | ViewLog | GoBackToLogin deriving (Show, Read) -- Read typeclass is used to convert string to
+data Action = RecommendGymWork | GymWork | MakeAppointment |  CustomPlan | ViewLog | ViewCustomPlan | GoBackToLogin deriving (Show, Read) -- Read typeclass is used to convert string to
 data Exercise = Abs | Back | Biceps | Calf | Chest | Forearms | Legs | Shoulders | Triceps deriving (Show, Read) -- Read typeclass is used to convert string to
 data Experience = Beginner | Intermediate | Advanced deriving (Show, Read) -- Read typeclass is used to convert string to
 data Goal = Strength | MuscleSize | MuscleEndurance deriving (Show, Read) -- Read typeclass is used to convert string to
@@ -115,7 +116,8 @@ instance Question Action where
                          ("3", CustomPlan, "CustomPlan"),
                          ("4", MakeAppointment, "MakeAppointment"),
                          ("5", ViewLog, "ViewLog"),
-                         ("6", GoBackToLogin, "GoBackToLogin")]
+                         ("6", ViewCustomPlan, "ViewCustomPlan"),
+                         ("7", GoBackToLogin, "GoBackToLogin")]
                          
 
 instance Question Exercise where
@@ -715,12 +717,12 @@ customizeGymWorkPlan =
     ) days >>= \workoutSchedule ->
 
     -- Display the final workout schedule
-    putStrLn "Here is your complete workout plan:" >> 
+    putStrLn ("\n--------Your Plan: " ++ planName ++ "--------") >> 
     mapM_ (\(day, workouts) -> 
         putStrLn day >> 
         mapM_ (\w -> putStrLn ("  - " ++ w)) workouts
     ) workoutSchedule >> 
-    return (GymWorkPlan planName numberOfDays)
+    return (GymWorkPlan planName numberOfDays workoutSchedule)
 
 -- Helper function to ask for a valid number of days
 askNumberOfDays :: IO Int
@@ -752,14 +754,29 @@ selectWorkouts selectedWorkouts =
           else putStrLn "Invalid workout number(s). Please try again." >>
                selectWorkouts selectedWorkouts  -- Retry workout selection
 
-
-
 -- Helper function to split a string by a delimiter
 wordsWhen :: (Char -> Bool) -> String -> [String]
 wordsWhen p s = case dropWhile p s of
     "" -> []
     s' -> w : wordsWhen p s''
           where (w, s'') = break p s'
+
+-- Function to display a plan by name
+displayPlanByName :: [GymWorkPlan] -> IO ()
+displayPlanByName plans = 
+    putStr "Enter the name of the plan you want to display: " >>
+    getLine >>= \name ->
+    let maybePlan = find (\plan -> planName plan == name) plans
+    in if isJust maybePlan
+       then let GymWorkPlan _ days schedule = fromJust maybePlan
+            in putStrLn ("Plan Name: " ++ name) >>
+               putStrLn ("Number of Days: " ++ show days) >>
+               putStrLn "Workout Schedule:" >>
+               mapM_ (\(day, workouts) -> 
+                   putStrLn day >>
+                   mapM_ (\w -> putStrLn ("  - " ++ w)) workouts
+               ) schedule
+       else putStrLn "Plan not found. Please check the name and try again."
 
 
 -- Helper function to retry on invalid input
@@ -872,8 +889,8 @@ validCredentials enteredEmail enteredPassword =
                _ -> Nothing
 
 -- Function to perform login
-performLogin :: [Appointment] -> [LogEntry] -> IO ()
-performLogin apt log =
+performLogin :: [Appointment] -> [LogEntry] -> [GymWorkPlan] -> IO ()
+performLogin apt log  plan =
        putStrLn "\n***************************************" >>
        putStrLn "     Welcome to the FitGym System      " >>
        putStrLn "***************************************" >>
@@ -886,13 +903,13 @@ performLogin apt log =
               Just userType ->
                      let loginMessage = login userType email password
                      in case loginMessage of
-                            Just message -> putStrLn message >> userJourney userType apt log
+                            Just message -> putStrLn message >> userJourney userType apt log plan
                             Nothing -> putStrLn "Invalid credentials. Please try again."
-              Nothing -> putStrLn "Invalid credentials. Please try again." >> performLogin apt log
+              Nothing -> putStrLn "Invalid credentials. Please try again." >> performLogin apt log plan
 
 -- Function to display user journey based on user type
-userJourney :: UserType -> [Appointment] -> [LogEntry] -> IO ()
-userJourney userType appointments log = case userType of
+userJourney :: UserType -> [Appointment] -> [LogEntry] -> [GymWorkPlan] -> IO ()
+userJourney userType appointments log gymWorkPlans = case userType of
     -- For User
     User _ -> do
         putStrLn "\n***************************************"
@@ -908,7 +925,7 @@ userJourney userType appointments log = case userType of
                 -- Provide workout recommendation based on experience and goal
                 let recommendation = getRecommendation experience goal
                 putStrLn recommendation -- Display the recommendation to the user
-                userJourney userType appointments log
+                userJourney userType appointments log gymWorkPlans
             GymWork -> do
                 exercise <- askQuestion :: IO Exercise
                 putStrLn ("You selected: " ++ show exercise)
@@ -921,23 +938,27 @@ userJourney userType appointments log = case userType of
                 logEntry <- logWorkout workoutChoice
                 -- If logEntry is not empty, add it to the log
                 let updatedLog = if workoutName logEntry /= "" then logEntry : log else log
-                userJourney userType appointments updatedLog
-            CustomPlan -> do
-                -- Prompt the user to customize their gym work plan
-                customizedPlan <- customizeGymWorkPlan
-                userJourney userType appointments log
-            ViewLog -> do
-                -- Display the workout log
-                displayLog log
-                userJourney userType appointments log
+                userJourney userType appointments updatedLog gymWorkPlans
             MakeAppointment -> do
                 let userEmail = getUserEmail userType
                 updatedAppointments <- makeAppointment userEmail coachAvailability appointments
                 -- Recurse with the updated appointments list
-                userJourney userType updatedAppointments log
+                userJourney userType updatedAppointments log gymWorkPlans
+            CustomPlan -> do
+                -- Prompt the user to customize their gym work plan
+                customizedPlan <- customizeGymWorkPlan
+                userJourney userType appointments log (customizedPlan : gymWorkPlans)
+            ViewLog -> do
+                -- Display the workout log
+                displayLog log
+                userJourney userType appointments log gymWorkPlans
+            ViewCustomPlan -> do
+                -- Display the gym work plans
+                displayPlanByName gymWorkPlans
+                userJourney userType appointments log gymWorkPlans
             GoBackToLogin -> do
                 putStrLn "Returning to the login screen...\n"
-                getChoice >> performLogin appointments log-- Go back to login screen  
+                getChoice >> performLogin appointments log gymWorkPlans-- Go back to login screen  
     -- For Coach
     Coach (Credentials coachEmail _) -> do
       putStrLn "\n***************************************"
@@ -948,7 +969,7 @@ userJourney userType appointments log = case userType of
       case action of
           GoBackToLogin -> do
               putStrLn "\nReturning to the login screen..."
-              getChoice >> performLogin appointments log-- Go back to login screen
+              getChoice >> performLogin appointments log gymWorkPlans-- Go back to login screen
 
 -- Function to display the login menu and get user choice
 getChoice :: IO Int
@@ -971,7 +992,7 @@ getChoice =
 main :: IO ()
 main = getChoice >>= \choice ->
        case choice of
-              1 -> performLogin [] []
+              1 -> performLogin [] [] []
               2 -> putStrLn "Exiting the system. Goodbye!"
               _ ->
                      putStrLn "Invalid choice. Please try again.\n" >>

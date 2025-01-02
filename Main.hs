@@ -1,5 +1,5 @@
 import Text.Read (readMaybe)
-import Data.Maybe (fromMaybe, isJust, fromJust)
+import Data.Maybe (fromMaybe)
 import Data.List (find, sortBy, groupBy)
 import Data.Function (on)
 import Control.Monad (zipWithM_)
@@ -745,7 +745,7 @@ selectWorkouts selectedWorkouts =
        putStr "Enter the numbers of the workouts you want for this session (comma-separated): " >>
        getLine >>= \workoutInput ->  -- Get workout input
        let workoutNumbers = map read (wordsWhen (== ',') workoutInput)
-       in if all (`elem` validNumbers) workoutNumbers
+       in if all (`elem` validNumbers) workoutNumbers -- validate workout numbers
           then putStr "Would you like to add more exercises for this day? (yes/no): " >>
                getLine >>= \response ->
                if response == "yes"
@@ -761,23 +761,26 @@ wordsWhen p s = case dropWhile p s of
     s' -> w : wordsWhen p s''
           where (w, s'') = break p s'
 
--- Function to display a plan by name
+-- Function to display a plan by selection
 displayPlanByName :: [GymWorkPlan] -> IO ()
 displayPlanByName plans = 
-    putStr "Enter the name of the plan you want to display: " >>
-    getLine >>= \name ->
-    let maybePlan = find (\plan -> planName plan == name) plans
-    in if isJust maybePlan
-       then let GymWorkPlan _ days schedule = fromJust maybePlan
-            in putStrLn ("Plan Name: " ++ name) >>
-               putStrLn ("Number of Days: " ++ show days) >>
-               putStrLn "Workout Schedule:" >>
-               mapM_ (\(day, workouts) -> 
-                   putStrLn day >>
-                   mapM_ (\w -> putStrLn ("  - " ++ w)) workouts
-               ) schedule
-       else putStrLn "Plan not found. Please check the name and try again."
-
+    if null plans
+        then putStrLn "No custom plans available."
+        else
+            putStrLn "\nAvailable Plans:" >>
+            zipWithM_ (\i plan -> putStrLn (show i ++ ". " ++ planName plan)) [1 ..] plans >>
+            putStr "Enter the number of the plan you want to display: " >>
+            readLn >>= \choice ->
+            if choice >= 1 && choice <= length plans
+                then let GymWorkPlan name days schedule = plans !! (choice - 1)
+                     in putStrLn ("\nPlan Name: " ++ name) >>
+                        putStrLn ("Number of Days: " ++ show days) >>
+                        putStrLn "Workout Schedule:" >>
+                        mapM_ (\(day, workouts) -> 
+                            putStrLn day >>
+                            mapM_ (\w -> putStrLn ("  - " ++ w)) workouts
+                        ) schedule
+                else putStrLn "Invalid selection. Please try again."
 
 -- Helper function to retry on invalid input
 retryOnInvalid :: IO (Maybe a) -> String -> IO a
@@ -876,7 +879,6 @@ askGymQuestion prompt options = do
 -- Helper function to display a prompt and get user input
 prompt :: String -> IO String
 prompt message = putStrLn message >> getLine
-
 
 -- Validate credentials and return the appropriate UserType
 validCredentials :: String -> String -> Maybe UserType

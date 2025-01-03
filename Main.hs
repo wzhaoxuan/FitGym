@@ -3,6 +3,7 @@ import Data.Maybe (fromMaybe)
 import Data.List (find, sortBy, groupBy)
 import Data.Function (on)
 import Control.Monad (zipWithM_)
+import Data.Time (parseTimeM, defaultTimeLocale, Day)
 
 -- Define the Email, Password, and Description types
 type Email = String
@@ -649,6 +650,16 @@ getWorkouts exercise = case exercise of
                   Workout "Cable Tricep Pushdowns" "Attach a rope to a cable machine. Hold the rope with an overhand grip. Push the rope down, extending your arms.\n",
                   Workout "Barbell Tricep" "Hold a barbell with an overhand grip. Extend your arms overhead, then lower the bar behind your head.\n"]
 
+-- Function to validate the date using binding operator
+validateDate :: String -> IO String
+validateDate inputDate =
+    case parseTimeM True defaultTimeLocale "%Y/%m/%d" inputDate :: Maybe Day of
+        Just _ -> return inputDate  -- If valid, return the date
+        Nothing ->
+            putStrLn "Invalid date. Please enter the date in format YYYY/MM/DD." >>
+            putStr "Enter the date (format: YYYY/MM/DD): " >>
+            getLine >>= validateDate
+
 -- Function to log a workout
 logWorkout :: String -> IO LogEntry
 logWorkout workoutName =
@@ -656,8 +667,8 @@ logWorkout workoutName =
   getLine >>= \response ->
   if response == "yes"
     then
-      putStr "Enter the date (format: YYYY-MM-DD):" >>
-       getLine >>= \date ->
+      putStr "Enter the date (format: YYYY/MM/DD):" >>
+       getLine >>= validateDate >>= \date ->
        putStr "Enter the number of sets:" >>
        readLn >>= \numSets ->
        putStr "Enter the number of reps per set:" >>

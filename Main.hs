@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use lambda-case" #-}
 import Text.Read (readMaybe)
 import Data.Maybe (fromMaybe)
 import Data.List (find, sortBy, groupBy)
@@ -920,69 +922,66 @@ performLogin apt log  plan =
                             Nothing -> putStrLn "Invalid credentials. Please try again."
               Nothing -> putStrLn "Invalid credentials. Please try again." >> performLogin apt log plan
 
--- Function to display user journey based on user type
 userJourney :: UserType -> [Appointment] -> [LogEntry] -> [GymWorkPlan] -> IO ()
-userJourney userType appointments log gymWorkPlans = case userType of
-    -- For User
-    User _ -> do
-        putStrLn "\n***************************************"
-        putStrLn "                FitGym                  "
-        putStrLn "***************************************"
-        action <- askQuestion :: IO Action
-        -- Ask the user for their experience, goal, and workout days.
-        case action of
-            RecommendGymWork -> do
-                experience <- askQuestion :: IO Experience
-                goal <- askQuestion :: IO Goal
-                putStrLn ("For a " ++ show experience ++ " focusing on building " ++ show goal ++ ".")
-                -- Provide workout recommendation based on experience and goal
-                let recommendation = getRecommendation experience goal
-                putStrLn recommendation -- Display the recommendation to the user
-                userJourney userType appointments log gymWorkPlans
-            GymWork -> do
-                exercise <- askQuestion :: IO Exercise
-                putStrLn ("You selected: " ++ show exercise)
-                let workouts = getWorkouts exercise
-                putStrLn "Available workouts:"
-                mapM_ (\(Workout name desc) -> putStrLn $ "- " ++ name ++ ": " ++ desc) workouts
-                workoutChoice <- askGymQuestion "Which workout would you like to perform?" (zipWith (\i (Workout name _) -> (show i, name, name)) [1..] workouts)
-                putStrLn ("You selected workout: " ++ workoutChoice)
-                -- Log the workout
-                logEntry <- logWorkout workoutChoice
-                -- If logEntry is not empty, add it to the log
-                let updatedLog = if workoutName logEntry /= "" then logEntry : log else log
-                userJourney userType appointments updatedLog gymWorkPlans
-            MakeAppointment -> do
-                let userEmail = getUserEmail userType
-                updatedAppointments <- makeAppointment userEmail coachAvailability appointments
-                -- Recurse with the updated appointments list
-                userJourney userType updatedAppointments log gymWorkPlans
-            CustomPlan -> do
-                -- Prompt the user to customize their gym work plan
-                customizedPlan <- customizeGymWorkPlan
-                userJourney userType appointments log (customizedPlan : gymWorkPlans)
-            ViewLog -> do
-                -- Display the workout log
-                displayLog log
-                userJourney userType appointments log gymWorkPlans
-            ViewCustomPlan -> do
-                -- Display the gym work plans
-                displayPlanByName gymWorkPlans
-                userJourney userType appointments log gymWorkPlans
-            GoBackToLogin -> do
-                putStrLn "Returning to the login screen...\n"
-                getChoice >> performLogin appointments log gymWorkPlans-- Go back to login screen  
-    -- For Coach
-    Coach (Credentials coachEmail _) -> do
-      putStrLn "\n***************************************"
-      putStrLn "             Coach Dashboard            "
-      putStrLn "***************************************"
-      viewCoachAppointments coachEmail (return appointments)
-      action <- askQuestion :: IO Action
-      case action of
-          GoBackToLogin -> do
-              putStrLn "\nReturning to the login screen..."
-              getChoice >> performLogin appointments log gymWorkPlans-- Go back to login screen
+userJourney userType appointments log gymWorkPlans = 
+    case userType of
+        -- For User
+        User _ -> 
+            putStrLn "\n***************************************" >>
+            putStrLn "                FitGym                  " >>
+            putStrLn "***************************************" >>
+            (askQuestion :: IO Action) >>= \action ->
+                case action of
+                    RecommendGymWork -> 
+                        (askQuestion :: IO Experience) >>= \experience ->
+                        (askQuestion :: IO Goal) >>= \goal ->
+                            putStrLn ("For a " ++ show experience ++ " focusing on building " ++ show goal ++ ".") >>
+                            let recommendation = getRecommendation experience goal
+                            in putStrLn recommendation >> 
+                            userJourney userType appointments log gymWorkPlans
+                    GymWork ->
+                        (askQuestion :: IO Exercise) >>= \exercise ->
+                            putStrLn ("You selected: " ++ show exercise) >>
+                            let workouts = getWorkouts exercise
+                            in putStrLn "Available workouts:" >>
+                               mapM_ (\(Workout name desc) -> putStrLn $ "- " ++ name ++ ": " ++ desc) workouts >>
+                               askGymQuestion "Which workout would you like to perform?" (zipWith (\i (Workout name _) -> (show i, name, name)) [1..] workouts) >>= \workoutChoice ->
+                                   putStrLn ("You selected workout: " ++ workoutChoice) >>
+                                   logWorkout workoutChoice >>= \logEntry ->
+                                       let updatedLog = if workoutName logEntry /= "" then logEntry : log else log
+                                       in userJourney userType appointments updatedLog gymWorkPlans
+                    MakeAppointment ->
+                        let userEmail = getUserEmail userType
+                        in makeAppointment userEmail coachAvailability appointments >>= \updatedAppointments ->
+                            userJourney userType updatedAppointments log gymWorkPlans
+                    CustomPlan ->
+                        customizeGymWorkPlan >>= \customizedPlan ->
+                            userJourney userType appointments log (customizedPlan : gymWorkPlans)
+                    ViewLog ->
+                        displayLog log >>
+                        userJourney userType appointments log gymWorkPlans
+                    ViewCustomPlan ->
+                        displayPlanByName gymWorkPlans >>
+                        userJourney userType appointments log gymWorkPlans
+                    GoBackToLogin ->
+                        putStrLn "Returning to the login screen...\n" >>
+                        getChoice >> performLogin appointments log gymWorkPlans
+
+        -- For Coach
+        Coach (Credentials coachEmail _) ->
+            putStrLn "\n***************************************" >>
+            putStrLn "             Coach Dashboard            " >>
+            putStrLn "***************************************" >>
+            viewCoachAppointments coachEmail (return appointments) >>
+            putStrLn "1. Go back to the login screen" >>
+            putStr "Enter your choice: " >>
+            getLine >>= \action ->
+                if action == "1"
+                    then putStrLn "\nReturning to the login screen..." >>
+                         getChoice >> performLogin appointments log gymWorkPlans
+                    else putStrLn "Invalid selection. Please choose '1' to go back to the login screen." >>
+                         userJourney (Coach (Credentials coachEmail "")) appointments log gymWorkPlans
+
 
 -- Function to display the login menu and get user choice
 getChoice :: IO Int

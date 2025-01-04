@@ -731,14 +731,14 @@ customizeGymWorkPlan =
 
 -- Helper function to ask for a valid number of days
 askNumberOfDays :: IO Int
-askNumberOfDays = do
-    putStr "Enter the number of days you plan to work out per week (1-7): "
-    numberOfDays <- readLn
-    if numberOfDays >= 1 && numberOfDays <= 7
-        then return numberOfDays
-        else do
-            putStrLn "Invalid number of days. Please enter a number between 1 and 7."
-            askNumberOfDays  -- Recursively call until valid input is provided
+askNumberOfDays = 
+    putStr "Enter the number of days you plan to work out per week (1-7): " >>
+    readLn >>= \numberOfDays ->
+        if numberOfDays >= 1 && numberOfDays <= 7
+            then return numberOfDays
+            else putStrLn "Invalid number of days. Please enter a number between 1 and 7." >>
+                 askNumberOfDays  -- Recursively call until valid input is provided
+
 
 selectWorkouts :: [String] -> IO [String]
 selectWorkouts selectedWorkouts = 
@@ -804,46 +804,52 @@ addNewCoachAvailability email coachAvailability =
     defaultCoachAvailability email : coachAvailability
 
 -- Function to display all coaches and their availability
-showCoaches :: [Availability] -> IO ()
-showCoaches coaches = do
-    -- Check if coaches are being passed correctly
+showCoaches :: [Availability] -> IO (Maybe String)
+showCoaches coaches = 
     if null coaches
-        then putStrLn "No coaches available."
-        else mapM_ displayCoachAvailability coaches
+        then putStrLn "No coaches available." >> 
+        return Nothing  -- Return Nothing to indicate no coaches are available
+        else mapM_ displayCoachAvailability coaches >> 
+        return (Just "Coaches Available")  -- Return Just if coaches are available
   where
-    displayCoachAvailability coach = do
-        putStrLn ("Coach: " ++ emailCoach coach)
-        mapM_ (\(d, t) -> putStrLn ("  " ++ d ++ ": " ++ unwords t)) (time coach)
+    displayCoachAvailability coach = 
+        putStrLn ("Coach: " ++ emailCoach coach) >>
+        mapM_ (\(d, t) -> putStrLn ("  " ++ d ++ ": " ++ unwords t)) (time coach) >>
         putStrLn ""
 
 -- Main function to make an appointment
 makeAppointment :: String -> [Availability] -> [Appointment] -> IO [Appointment]
-makeAppointment userEmail coachAvailability appointments = do
-  -- Show all coaches and their availabilityy
-  showCoaches coachAvailability  -- Ensure this displays the coaches and their times
-  let coachEmails = map emailCoach coachAvailability
-  selectedCoachEmail <- retryOnInvalid (selectOption "Choose a coach:" coachEmails) "Invalid coach selection. Please try again."
-  let selectedCoachAvailability = find (\coach -> emailCoach coach == selectedCoachEmail) coachAvailability
-  case selectedCoachAvailability of
-    Just availability -> do
-      selectedDate <- retryOnInvalid (selectOption "\nAvailable days:" (day availability)) "Invalid date selection. Please try again."
-      let timesForDate = fromMaybe [] $ lookup selectedDate (time availability)
-      selectedTime <- retryOnInvalid (selectOption "\nAvailable times:" timesForDate) "Invalid time selection. Please try again."
-      let newAppointment = Appointment
-            { userEmail = userEmail
-            , coachEmail = selectedCoachEmail
-            , appointmentDate = selectedDate
-            , appointmentTime = selectedTime
-            }
-      let updatedAppointments = newAppointment : appointments
-      putStrLn "--------Appointment Scheduled--------"
-      putStrLn ("Coach: " ++ coachEmail newAppointment ++
-                 " \nDate: " ++ appointmentDate newAppointment ++
-                 " \nTime: " ++ appointmentTime newAppointment)
-      return updatedAppointments
-    Nothing -> do
-      putStrLn "Selected coach not found. Aborting..."
-      return appointments
+makeAppointment userEmail coachAvailability appointments = 
+  showCoaches coachAvailability >>= \coachStatus -> 
+    case coachStatus of
+      Nothing -> 
+        putStrLn "Returning to your user journey..." >> 
+        return appointments  -- Returning appointments to continue the flow
+      Just _ -> 
+        let coachEmails = map emailCoach coachAvailability
+        in retryOnInvalid (selectOption "Choose a coach:" coachEmails) "Invalid coach selection. Please try again." >>= \selectedCoachEmail ->
+          let selectedCoachAvailability = find (\coach -> emailCoach coach == selectedCoachEmail) coachAvailability
+          in case selectedCoachAvailability of
+            Just availability -> 
+              retryOnInvalid (selectOption "\nAvailable days:" (day availability)) "Invalid date selection. Please try again." >>= \selectedDate ->
+                let timesForDate = fromMaybe [] $ lookup selectedDate (time availability)
+                in retryOnInvalid (selectOption "\nAvailable times:" timesForDate) "Invalid time selection. Please try again." >>= \selectedTime ->
+                  let newAppointment = Appointment
+                        { userEmail = userEmail
+                        , coachEmail = selectedCoachEmail
+                        , appointmentDate = selectedDate
+                        , appointmentTime = selectedTime
+                        }
+                      updatedAppointments = newAppointment : appointments
+                  in putStrLn "--------Appointment Scheduled--------" >>
+                     putStrLn ("Coach: " ++ coachEmail newAppointment ++
+                                " \nDate: " ++ appointmentDate newAppointment ++
+                                " \nTime: " ++ appointmentTime newAppointment) >>
+                     return updatedAppointments
+            Nothing -> 
+              putStrLn "Selected coach not found. Aborting..." >> 
+              return appointments
+
 
 -- Helper function to display and select an option from a list
 selectOption :: String -> [String] -> IO (Maybe String)
@@ -917,24 +923,23 @@ validateSignUp userEmail userPassword userCredentials coachCredentials
 
 -- Function to sign up a new user or coach
 signUp :: [Credentials] -> [Credentials] -> IO ([Credentials], [Credentials], [Availability])
-signUp userCredentials coachCredentials = do
-    putStrLn "\n********** Sign Up **********"
-    putStr "Enter your email (Use @fitgym.com as user/ _coach@fitgym.com as coach): "
-    userEmail <- getLine
-    putStr "Enter your password (min 6 characters): "
-    userPassword <- getLine
-    result <- validateSignUp userEmail userPassword userCredentials coachCredentials
-    case result of
-        Left errorMessage -> do
-            putStrLn errorMessage
-            signUp userCredentials coachCredentials
-        Right (newUserCredentials, newCoachCredentials) -> do
-            -- Check if it's a coach and assign default availability if so
-            let newCoachAvailability = if "_coach@fitgym.com" `isSuffixOf` userEmail
-                                        then [defaultCoachAvailability userEmail] 
-                                        else []
-            putStrLn "Account created successfully! You can now log in."
-            return (newUserCredentials, newCoachCredentials, newCoachAvailability)
+signUp userCredentials coachCredentials = 
+    putStrLn "\n********** Sign Up **********" >>
+    putStr "Enter your email (Use @fitgym.com as user/ _coach@fitgym.com as coach): " >>
+    getLine >>= \userEmail ->
+        putStr "Enter your password (min 6 characters): " >>
+        getLine >>= \userPassword ->
+            validateSignUp userEmail userPassword userCredentials coachCredentials >>= \result ->
+                case result of
+                    Left errorMessage -> 
+                        putStrLn errorMessage >>
+                        signUp userCredentials coachCredentials  -- Recursive call on failure
+                    Right (newUserCredentials, newCoachCredentials) -> 
+                        let newCoachAvailability = if "_coach@fitgym.com" `isSuffixOf` userEmail
+                                                    then [defaultCoachAvailability userEmail] 
+                                                    else []
+                        in putStrLn "Account created successfully! You can now log in." >>
+                           return (newUserCredentials, newCoachCredentials, newCoachAvailability)
 
 
 -- Function to perform login
@@ -1017,26 +1022,23 @@ userJourney userType  userCredentials coachCredentials appointments coachAvailab
                          userJourney (Coach (Credentials coachEmail "")) userCredentials coachCredentials appointments coachAvailability log gymWorkPlans
 
 
-mainMenu :: [Credentials] -> [Credentials] -> [Appointment] -> [Availability]-> [LogEntry] -> [GymWorkPlan]  -> IO ()
-mainMenu userCredentials coachCredentials apt coachAvailability log plan  = do
-    putStrLn "\n***************************************"
-    putStrLn "     Welcome to the FitGym System      "
-    putStrLn "***************************************"
-    putStrLn "1. Login"
-    putStrLn "2. Sign Up"
-    putStrLn "3. Exit"
-    putStr "Enter your choice: "
-    choice <- getLine
-    case choice of
-        "1" -> performLogin userCredentials coachCredentials apt coachAvailability log plan
-        "2" -> do
-            (newUserCredentials, newCoachCredentials, newCoachAvailability) <- signUp userCredentials coachCredentials
-            -- Pass the newCoachAvailability separately if needed
-            mainMenu newUserCredentials newCoachCredentials apt (coachAvailability ++ newCoachAvailability) log plan
-        "3" -> putStrLn "Exiting the system. Goodbye!"
-        _   -> do
-            putStrLn "Invalid choice. Please try again."
-            mainMenu userCredentials coachCredentials apt coachAvailability log plan
+mainMenu :: [Credentials] -> [Credentials] -> [Appointment] -> [Availability] -> [LogEntry] -> [GymWorkPlan] -> IO ()
+mainMenu userCredentials coachCredentials apt coachAvailability log plan =
+    putStrLn "\n***************************************" >>
+    putStrLn "     Welcome to the FitGym System      " >>
+    putStrLn "***************************************" >>
+    putStrLn "1. Login" >>
+    putStrLn "2. Sign Up" >>
+    putStrLn "3. Exit" >>
+    putStr "Enter your choice: " >>
+    getLine >>= \choice ->
+        case choice of
+            "1" -> performLogin userCredentials coachCredentials apt coachAvailability log plan
+            "2" -> signUp userCredentials coachCredentials >>= \(newUserCredentials, newCoachCredentials, newCoachAvailability) ->
+                mainMenu newUserCredentials newCoachCredentials apt (coachAvailability ++ newCoachAvailability) log plan
+            "3" -> putStrLn "Exiting the system. Goodbye!"
+            _   -> putStrLn "Invalid choice. Please try again." >>
+                   mainMenu userCredentials coachCredentials apt coachAvailability log plan
 
 -- Main function
 main :: IO ()

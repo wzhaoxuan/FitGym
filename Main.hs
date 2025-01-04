@@ -66,31 +66,6 @@ data Goal = Strength | MuscleSize | MuscleEndurance deriving (Show, Read) -- Rea
 data TipCategory = ProgressionTips Goal| NutritionTips | RestAndRecovery | ExerciseAlternatives
 
 
--- Predefined credentials for users and coaches
-predefinedUserCredentials :: [Credentials]
-predefinedUserCredentials =
-  [ Credentials { email = "wzhao@fitgym.com", password = "wz123"},
-    Credentials { email = "zhengtan@fitgym.com", password = "zt123"}
-  ]
-
-predefinedCoachCredentials :: [Credentials]
-predefinedCoachCredentials =
-  [ Credentials { email = "Jane_coach@fitgym.com", password = "Jane123"},
-    Credentials { email = "Jack_coach@fitgym.com", password = "Jack123"}
-  ]
-
-
-coachAvailability :: [Availability]
-coachAvailability = [
-       Availability { emailCoach = "Jane@fitgym.com",
-       day = ["Monday", "Wednesday", "Friday"],
-       time = [("Monday", ["10:00", "11:00"]), ("Wednesday", ["10:00", "11:00"]), ("Friday", ["10:00", "11:00"])]
-       },
-
-       Availability { emailCoach = "Jack@fitgym.com",
-       day = ["Monday", "Tuesday", "Thursday"],
-       time = [("Monday", ["10:00", "11:00"]), ("Tuesday", ["12:00", "2:00"]), ("Thursday", ["10:00", "11:00"])]
-       }]
 
 -- Define a class for loginable types
 class Loginable a where
@@ -653,6 +628,22 @@ getWorkouts exercise = case exercise of
                   Workout "Cable Tricep Pushdowns" "Attach a rope to a cable machine. Hold the rope with an overhand grip. Push the rope down, extending your arms.\n",
                   Workout "Barbell Tricep" "Hold a barbell with an overhand grip. Extend your arms overhead, then lower the bar behind your head.\n"]
 
+-- Predefined credentials for users and coaches
+-- predefinedUserCredentials :: [Credentials]
+-- predefinedUserCredentials =
+--   [ Credentials { email = "wzhao@fitgym.com", password = "wz123"},
+--     Credentials { email = "zhengtan@fitgym.com", password = "zt123"}
+--   ]
+
+-- Default Availability for newly signed up coaches
+defaultCoachAvailability :: String -> Availability
+defaultCoachAvailability email = 
+    Availability
+        { emailCoach = email  -- This will be filled with the new coach's email
+        , day = ["Monday", "Tuesday"]
+        , time = [("Monday", ["10am", "12pm"]), ("Tuesday", ["10am", "12pm"])]
+        }
+
 -- Function to validate the date using binding operator
 validateDate :: String -> IO String
 validateDate inputDate =
@@ -781,13 +772,14 @@ viewPlanByName plans =
     if null plans
         then putStrLn "No custom plans available."
         else
-            putStrLn "\nAvailable Plans:" >>
+            putStrLn "Available Plans:" >>
             zipWithM_ (\i plan -> putStrLn (show i ++ ". " ++ planName plan)) [1 ..] plans >>
             putStr "Enter the number of the plan you want to display: " >>
             readLn >>= \choice ->
             if choice >= 1 && choice <= length plans
                 then let GymWorkPlan name days schedule = plans !! (choice - 1)
-                     in putStrLn ("\nPlan Name: " ++ name) >>
+                     in putStrLn "\n--------Plan Name--------" >>
+                        putStrLn ("Plan Name: " ++ name) >>
                         putStrLn ("Number of Days: " ++ show days) >>
                         putStrLn "Workout Schedule:" >>
                         mapM_ (\(day, workouts) -> 
@@ -806,40 +798,52 @@ retryOnInvalid action errorMessage =
             putStrLn errorMessage >>
             retryOnInvalid action errorMessage
 
+-- Function to add a new coach's availability to the list
+addNewCoachAvailability :: String -> [Availability] -> [Availability]
+addNewCoachAvailability email coachAvailability = 
+    defaultCoachAvailability email : coachAvailability
+
+-- Function to display all coaches and their availability
+showCoaches :: [Availability] -> IO ()
+showCoaches coaches = do
+    -- Check if coaches are being passed correctly
+    if null coaches
+        then putStrLn "No coaches available."
+        else mapM_ displayCoachAvailability coaches
+  where
+    displayCoachAvailability coach = do
+        putStrLn ("Coach: " ++ emailCoach coach)
+        mapM_ (\(d, t) -> putStrLn ("  " ++ d ++ ": " ++ unwords t)) (time coach)
+        putStrLn ""
 
 -- Main function to make an appointment
 makeAppointment :: String -> [Availability] -> [Appointment] -> IO [Appointment]
-makeAppointment userEmail coachAvailability appointments =
-    let coachEmails = map emailCoach coachAvailability
-    in retryOnInvalid
-          (selectOption "Choose a coach:" coachEmails)
-          "Invalid coach selection. Please try again."
-       >>= \selectedCoachEmail ->
-       let selectedCoachAvailability = find (\coach -> emailCoach coach == selectedCoachEmail) coachAvailability
-       in case selectedCoachAvailability of
-           Just availability ->
-               retryOnInvalid
-                   (selectOption "\nAvailable days:" (day availability))
-                   "Invalid date selection. Please try again."
-               >>= \selectedDate ->
-               let timesForDate = fromMaybe [] $ lookup selectedDate (time availability)
-               in retryOnInvalid
-                     (selectOption "\nAvailable times:" timesForDate)
-                     "Invalid time selection. Please try again."
-                  >>= \selectedTime ->
-                  let newAppointment = Appointment
-                          { userEmail = userEmail
-                          , coachEmail = selectedCoachEmail
-                          , appointmentDate = selectedDate
-                          , appointmentTime = selectedTime
-                          }
-                      updatedAppointments = newAppointment : appointments
-                  in putStrLn "--------Appointment Scheduled--------" >>
-                     putStrLn ("Coach: " ++ coachEmail newAppointment ++
-                               " \nDate: " ++ appointmentDate newAppointment ++
-                               " \nTime: " ++ appointmentTime newAppointment) >>
-                     return updatedAppointments
-           Nothing -> putStrLn "Selected coach not found. Aborting..." >> return appointments
+makeAppointment userEmail coachAvailability appointments = do
+  -- Show all coaches and their availabilityy
+  showCoaches coachAvailability  -- Ensure this displays the coaches and their times
+  let coachEmails = map emailCoach coachAvailability
+  selectedCoachEmail <- retryOnInvalid (selectOption "Choose a coach:" coachEmails) "Invalid coach selection. Please try again."
+  let selectedCoachAvailability = find (\coach -> emailCoach coach == selectedCoachEmail) coachAvailability
+  case selectedCoachAvailability of
+    Just availability -> do
+      selectedDate <- retryOnInvalid (selectOption "\nAvailable days:" (day availability)) "Invalid date selection. Please try again."
+      let timesForDate = fromMaybe [] $ lookup selectedDate (time availability)
+      selectedTime <- retryOnInvalid (selectOption "\nAvailable times:" timesForDate) "Invalid time selection. Please try again."
+      let newAppointment = Appointment
+            { userEmail = userEmail
+            , coachEmail = selectedCoachEmail
+            , appointmentDate = selectedDate
+            , appointmentTime = selectedTime
+            }
+      let updatedAppointments = newAppointment : appointments
+      putStrLn "--------Appointment Scheduled--------"
+      putStrLn ("Coach: " ++ coachEmail newAppointment ++
+                 " \nDate: " ++ appointmentDate newAppointment ++
+                 " \nTime: " ++ appointmentTime newAppointment)
+      return updatedAppointments
+    Nothing -> do
+      putStrLn "Selected coach not found. Aborting..."
+      return appointments
 
 -- Helper function to display and select an option from a list
 selectOption :: String -> [String] -> IO (Maybe String)
@@ -912,25 +916,30 @@ validateSignUp userEmail userPassword userCredentials coachCredentials
     | otherwise = return $ Left "Invalid email domain. Please use a valid @fitgym.com for user or _coach@fitgym.com for coach email."
 
 -- Function to sign up a new user or coach
-signUp :: [Credentials] -> [Credentials] -> IO ([Credentials], [Credentials])
-signUp userCredentials coachCredentials = 
-    putStrLn "\n********** Sign Up **********" >>
-    putStr "Enter your email: " >>
-    getLine >>= \userEmail ->
-    putStr "Enter your password (min 6 characters): " >>
-    getLine >>= \userPassword ->
-    validateSignUp userEmail userPassword userCredentials coachCredentials >>= \result ->
+signUp :: [Credentials] -> [Credentials] -> IO ([Credentials], [Credentials], [Availability])
+signUp userCredentials coachCredentials = do
+    putStrLn "\n********** Sign Up **********"
+    putStr "Enter your email (Use @fitgym.com as user/ _coach@fitgym.com as coach): "
+    userEmail <- getLine
+    putStr "Enter your password (min 6 characters): "
+    userPassword <- getLine
+    result <- validateSignUp userEmail userPassword userCredentials coachCredentials
     case result of
-        Left errorMessage -> 
-            putStrLn errorMessage >> 
+        Left errorMessage -> do
+            putStrLn errorMessage
             signUp userCredentials coachCredentials
-        Right (newUserCredentials, newCoachCredentials) -> 
-            putStrLn "Account created successfully! You can now log in." >>
-            return (newUserCredentials, newCoachCredentials)
+        Right (newUserCredentials, newCoachCredentials) -> do
+            -- Check if it's a coach and assign default availability if so
+            let newCoachAvailability = if "_coach@fitgym.com" `isSuffixOf` userEmail
+                                        then [defaultCoachAvailability userEmail] 
+                                        else []
+            putStrLn "Account created successfully! You can now log in."
+            return (newUserCredentials, newCoachCredentials, newCoachAvailability)
+
 
 -- Function to perform login
-performLogin :: [Credentials] -> [Credentials] -> [Appointment] -> [LogEntry] -> [GymWorkPlan] -> IO ()
-performLogin userCredentials coachCredentials apt log  plan =
+performLogin :: [Credentials] -> [Credentials] -> [Appointment] -> [Availability] -> [LogEntry] -> [GymWorkPlan] -> IO ()
+performLogin userCredentials coachCredentials apt  coachAvailability log  plan =
        putStrLn "\n***************************************" >>
        putStrLn "     Welcome to the FitGym System      " >>
        putStrLn "***************************************" >>
@@ -943,12 +952,12 @@ performLogin userCredentials coachCredentials apt log  plan =
               Just userType ->
                      let loginMessage = login userType email password
                      in case loginMessage of
-                            Just message -> putStrLn message >> userJourney userType userCredentials coachCredentials apt log plan
-                            Nothing -> putStrLn "Invalid credentials. Please try again."
-              Nothing -> putStrLn "Invalid credentials. Please try again." >> performLogin userCredentials coachCredentials apt log plan 
+                            Just message -> putStrLn message >> userJourney userType userCredentials coachCredentials apt coachAvailability log plan
+                            Nothing -> putStrLn "Invalid credentials. Please sign up an account."
+              Nothing -> putStrLn "Invalid credentials. Please sign up an account." >> mainMenu userCredentials coachCredentials apt coachAvailability log plan 
 
-userJourney :: UserType -> [Credentials] -> [Credentials] -> [Appointment] -> [LogEntry] -> [GymWorkPlan] -> IO ()
-userJourney userType  userCredentials coachCredentials appointments log gymWorkPlans = 
+userJourney :: UserType -> [Credentials] -> [Credentials] -> [Appointment] -> [Availability] -> [LogEntry] -> [GymWorkPlan] -> IO ()
+userJourney userType  userCredentials coachCredentials appointments coachAvailability log gymWorkPlans = 
     case userType of
         -- For User
         User _ -> 
@@ -963,7 +972,7 @@ userJourney userType  userCredentials coachCredentials appointments log gymWorkP
                             putStrLn ("For a " ++ show experience ++ " focusing on building " ++ show goal ++ ".") >>
                             let recommendation = getRecommendation experience goal
                             in putStrLn recommendation >> 
-                            userJourney userType userCredentials coachCredentials appointments log gymWorkPlans
+                            userJourney userType userCredentials coachCredentials appointments coachAvailability log gymWorkPlans
                     GymWork ->
                         (askQuestion :: IO Exercise) >>= \exercise ->
                             putStrLn ("You selected: " ++ show exercise) >>
@@ -974,23 +983,23 @@ userJourney userType  userCredentials coachCredentials appointments log gymWorkP
                                    putStrLn ("You selected workout: " ++ workoutChoice) >>
                                    logWorkout workoutChoice >>= \logEntry ->
                                        let updatedLog = if workoutName logEntry /= "" then logEntry : log else log
-                                       in userJourney userType userCredentials coachCredentials appointments updatedLog gymWorkPlans
+                                       in userJourney userType userCredentials coachCredentials appointments coachAvailability updatedLog gymWorkPlans
                     MakeAppointment ->
                         let userEmail = getUserEmail userType
                         in makeAppointment userEmail coachAvailability appointments >>= \updatedAppointments ->
-                            userJourney userType userCredentials coachCredentials updatedAppointments log gymWorkPlans
+                            userJourney userType userCredentials coachCredentials updatedAppointments coachAvailability log gymWorkPlans
                     CustomPlan ->
                         customizeGymWorkPlan >>= \customizedPlan ->
-                            userJourney userType userCredentials coachCredentials appointments log (customizedPlan : gymWorkPlans)
+                            userJourney userType userCredentials coachCredentials appointments coachAvailability log (customizedPlan : gymWorkPlans)
                     ViewLog ->
                         displayLog log >>
-                        userJourney userType userCredentials coachCredentials appointments log gymWorkPlans
+                        userJourney userType userCredentials coachCredentials appointments coachAvailability log gymWorkPlans
                     ViewCustomPlan ->
                         viewPlanByName gymWorkPlans >>
-                        userJourney userType userCredentials coachCredentials appointments log gymWorkPlans
+                        userJourney userType userCredentials coachCredentials appointments coachAvailability log gymWorkPlans
                     GoBackToLogin ->
                         putStrLn "Returning to the login screen...\n" >>
-                        mainMenu userCredentials coachCredentials appointments log gymWorkPlans
+                        mainMenu userCredentials coachCredentials appointments coachAvailability log gymWorkPlans
 
         -- For Coach
         Coach (Credentials coachEmail _) ->
@@ -1003,29 +1012,32 @@ userJourney userType  userCredentials coachCredentials appointments log gymWorkP
             getLine >>= \action ->
                 if action == "1"
                     then putStrLn "\nReturning to the login screen..." >>
-                         mainMenu userCredentials coachCredentials appointments log gymWorkPlans
+                         mainMenu userCredentials coachCredentials appointments coachAvailability log gymWorkPlans
                     else putStrLn "Invalid selection. Please choose '1' to go back to the login screen." >>
-                         userJourney (Coach (Credentials coachEmail "")) userCredentials coachCredentials appointments log gymWorkPlans
+                         userJourney (Coach (Credentials coachEmail "")) userCredentials coachCredentials appointments coachAvailability log gymWorkPlans
 
 
-mainMenu :: [Credentials] -> [Credentials] -> [Appointment] -> [LogEntry] -> [GymWorkPlan] -> IO ()
-mainMenu userCredentials coachCredentials apt log plan = 
-    putStrLn "\n***************************************" >>
-    putStrLn "     Welcome to the FitGym System      " >>
-    putStrLn "***************************************" >>
-    putStrLn "1. Login" >>
-    putStrLn "2. Sign Up" >>
-    putStrLn "3. Exit" >>
-    putStr "Enter your choice: " >>
-    getLine >>= \choice ->
-        case choice of
-            "1" -> performLogin userCredentials coachCredentials apt log plan
-            "2" -> signUp userCredentials coachCredentials >>= \(newUserCredentials, newCoachCredentials) ->
-                mainMenu newUserCredentials newCoachCredentials apt log plan
-            "3" -> putStrLn "Exiting the system. Goodbye!"
-            _   -> putStrLn "Invalid choice. Please try again." >>
-                   mainMenu userCredentials coachCredentials apt log plan
+mainMenu :: [Credentials] -> [Credentials] -> [Appointment] -> [Availability]-> [LogEntry] -> [GymWorkPlan]  -> IO ()
+mainMenu userCredentials coachCredentials apt coachAvailability log plan  = do
+    putStrLn "\n***************************************"
+    putStrLn "     Welcome to the FitGym System      "
+    putStrLn "***************************************"
+    putStrLn "1. Login"
+    putStrLn "2. Sign Up"
+    putStrLn "3. Exit"
+    putStr "Enter your choice: "
+    choice <- getLine
+    case choice of
+        "1" -> performLogin userCredentials coachCredentials apt coachAvailability log plan
+        "2" -> do
+            (newUserCredentials, newCoachCredentials, newCoachAvailability) <- signUp userCredentials coachCredentials
+            -- Pass the newCoachAvailability separately if needed
+            mainMenu newUserCredentials newCoachCredentials apt (coachAvailability ++ newCoachAvailability) log plan
+        "3" -> putStrLn "Exiting the system. Goodbye!"
+        _   -> do
+            putStrLn "Invalid choice. Please try again."
+            mainMenu userCredentials coachCredentials apt coachAvailability log plan
 
 -- Main function
 main :: IO ()
-main = mainMenu predefinedUserCredentials predefinedCoachCredentials [] [] []
+main = mainMenu [] [] [] [] [] []

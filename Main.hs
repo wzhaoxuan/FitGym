@@ -2,7 +2,7 @@
 {-# HLINT ignore "Use lambda-case" #-}
 import Text.Read (readMaybe)
 import Data.Maybe (fromMaybe)
-import Data.List (find, sortBy, groupBy)
+import Data.List (find, sortBy, groupBy, isSuffixOf)
 import Data.Function (on)
 import Control.Monad (zipWithM_)
 import Data.Time (parseTimeM, defaultTimeLocale, Day)
@@ -67,17 +67,18 @@ data TipCategory = ProgressionTips Goal| NutritionTips | RestAndRecovery | Exerc
 
 
 -- Predefined credentials for users and coaches
-validUserCredentials :: [Credentials]
-validUserCredentials =
+predefinedUserCredentials :: [Credentials]
+predefinedUserCredentials =
   [ Credentials { email = "wzhao@fitgym.com", password = "wz123"},
     Credentials { email = "zhengtan@fitgym.com", password = "zt123"}
   ]
 
-validCoachCredentials :: [Credentials]
-validCoachCredentials =
-  [ Credentials { email = "Jane@fitgym.com", password = "Jane123"},
-    Credentials { email = "Jack@fitgym.com", password = "Jack123"}
+predefinedCoachCredentials :: [Credentials]
+predefinedCoachCredentials =
+  [ Credentials { email = "Jane_coach@fitgym.com", password = "Jane123"},
+    Credentials { email = "Jack_coach@fitgym.com", password = "Jack123"}
   ]
+
 
 coachAvailability :: [Availability]
 coachAvailability = [
@@ -757,7 +758,7 @@ selectWorkouts selectedWorkouts =
        zipWithM_ (\i (Workout name _) -> putStrLn (show i ++ ". " ++ name)) [1 ..] workouts >>
        putStr "Enter the numbers of the workouts you want for this session (comma-separated): " >>
        getLine >>= \workoutInput ->  -- Get workout input
-       let workoutNumbers = map read (wordsWhen (== ',') workoutInput)
+       let workoutNumbers = map read (wordsSplit (== ',') workoutInput)
        in if all (`elem` validNumbers) workoutNumbers -- validate workout numbers
           then putStr "Would you like to add more exercises for this day? (yes/no): " >>
                getLine >>= \response ->
@@ -768,15 +769,15 @@ selectWorkouts selectedWorkouts =
                selectWorkouts selectedWorkouts  -- Retry workout selection
 
 -- Helper function to split a string by a delimiter
-wordsWhen :: (Char -> Bool) -> String -> [String]
-wordsWhen p s = case dropWhile p s of
+wordsSplit :: (Char -> Bool) -> String -> [String]
+wordsSplit p s = case dropWhile p s of
     "" -> []
-    s' -> w : wordsWhen p s''
+    s' -> w : wordsSplit p s''
           where (w, s'') = break p s'
 
 -- Function to display a plan by selection
-displayPlanByName :: [GymWorkPlan] -> IO ()
-displayPlanByName plans = 
+viewPlanByName :: [GymWorkPlan] -> IO ()
+viewPlanByName plans = 
     if null plans
         then putStrLn "No custom plans available."
         else
@@ -876,36 +877,60 @@ getUserEmail (Coach (Credentials email _)) = email
 
 -- Generalized askQuestion function
 askGymQuestion :: String -> [(String, a, String)] -> IO a
-askGymQuestion prompt options = do
-    putStrLn prompt
-    mapM_ (\(label, _, description) -> putStrLn (label ++ ": " ++ description)) options
-    putStr "Enter your choice: "
-    choice <- getLine
-    case lookup choice (map (\(label, _, description) -> (label, description)) options) of
-        Just description -> putStrLn ("\n--------" ++ description ++ "--------")
-        Nothing -> putStrLn "Invalid choice. Please try again."
-    case lookup choice (map (\(label, val, _) -> (label, val)) options) of
-        Just result -> return result
-        Nothing -> askGymQuestion prompt options
+askGymQuestion prompt options = 
+    putStrLn prompt >>
+    mapM_ (\(label, _, description) -> putStrLn (label ++ ": " ++ description)) options >>
+    putStr "Enter your choice: " >>
+    getLine >>= \choice ->
+        case lookup choice (map (\(label, _, description) -> (label, description)) options) of
+            Just description -> putStrLn ("\n--------" ++ description ++ "--------") >>
+                                continueChoice choice
+            Nothing -> putStrLn "Invalid choice. Please try again.\n" >>
+                       askGymQuestion prompt options
+  where
+    continueChoice choice = 
+        case lookup choice (map (\(label, val, _) -> (label, val)) options) of
+            Just result -> return result
+            Nothing -> askGymQuestion prompt options
 
-
--- Helper function to display a prompt and get user input
-prompt :: String -> IO String
-prompt message = putStrLn message >> getLine
 
 -- Validate credentials and return the appropriate UserType
-validCredentials :: String -> String -> Maybe UserType
-validCredentials enteredEmail enteredPassword =
-    -- Check if the email and password match valid user credentials
-    case lookup enteredEmail (map (\(Credentials e p) -> (e, p)) validUserCredentials) of
-        Just correctPassword | correctPassword == enteredPassword -> Just (User (Credentials enteredEmail enteredPassword))
-        _ -> case lookup enteredEmail (map (\(Credentials e p) -> (e, p)) validCoachCredentials) of
-               Just correctPassword | correctPassword == enteredPassword -> Just (Coach (Credentials enteredEmail enteredPassword))
-               _ -> Nothing
+validCredentials :: String -> String -> [Credentials] -> [Credentials] -> Maybe UserType
+validCredentials enteredEmail enteredPassword userCredentials coachCredentials =
+  case lookup enteredEmail (map (\(Credentials e p) -> (e, p)) userCredentials) of
+    Just correctPassword | correctPassword == enteredPassword -> Just (User (Credentials enteredEmail enteredPassword))
+    _ -> case lookup enteredEmail (map (\(Credentials e p) -> (e, p)) coachCredentials) of
+           Just correctPassword | correctPassword == enteredPassword -> Just (Coach (Credentials enteredEmail enteredPassword))
+           _ -> Nothing
+
+-- Validate the sign-up credentials (email and password)
+validateSignUp :: String -> String -> [Credentials] -> [Credentials] -> IO (Either String ([Credentials], [Credentials]))
+validateSignUp userEmail userPassword userCredentials coachCredentials
+    | length userPassword < 6 = return $ Left "Password too short. Please try again."
+    | "_coach@fitgym.com" `isSuffixOf` userEmail = return $ Right (userCredentials, Credentials userEmail userPassword : coachCredentials)
+    | "@fitgym.com" `isSuffixOf` userEmail = return $ Right (Credentials userEmail userPassword : userCredentials, coachCredentials)
+    | otherwise = return $ Left "Invalid email domain. Please use a valid @fitgym.com for user or _coach@fitgym.com for coach email."
+
+-- Function to sign up a new user or coach
+signUp :: [Credentials] -> [Credentials] -> IO ([Credentials], [Credentials])
+signUp userCredentials coachCredentials = 
+    putStrLn "\n********** Sign Up **********" >>
+    putStr "Enter your email: " >>
+    getLine >>= \userEmail ->
+    putStr "Enter your password (min 6 characters): " >>
+    getLine >>= \userPassword ->
+    validateSignUp userEmail userPassword userCredentials coachCredentials >>= \result ->
+    case result of
+        Left errorMessage -> 
+            putStrLn errorMessage >> 
+            signUp userCredentials coachCredentials
+        Right (newUserCredentials, newCoachCredentials) -> 
+            putStrLn "Account created successfully! You can now log in." >>
+            return (newUserCredentials, newCoachCredentials)
 
 -- Function to perform login
-performLogin :: [Appointment] -> [LogEntry] -> [GymWorkPlan] -> IO ()
-performLogin apt log  plan =
+performLogin :: [Credentials] -> [Credentials] -> [Appointment] -> [LogEntry] -> [GymWorkPlan] -> IO ()
+performLogin userCredentials coachCredentials apt log  plan =
        putStrLn "\n***************************************" >>
        putStrLn "     Welcome to the FitGym System      " >>
        putStrLn "***************************************" >>
@@ -914,16 +939,16 @@ performLogin apt log  plan =
        putStr "Enter your password: " >>
        getLine >>= \password ->
        -- Apply the validation function and handle the result using a Functor
-       case validCredentials email password of
+       case validCredentials email password userCredentials coachCredentials of
               Just userType ->
                      let loginMessage = login userType email password
                      in case loginMessage of
-                            Just message -> putStrLn message >> userJourney userType apt log plan
+                            Just message -> putStrLn message >> userJourney userType userCredentials coachCredentials apt log plan
                             Nothing -> putStrLn "Invalid credentials. Please try again."
-              Nothing -> putStrLn "Invalid credentials. Please try again." >> performLogin apt log plan
+              Nothing -> putStrLn "Invalid credentials. Please try again." >> performLogin userCredentials coachCredentials apt log plan 
 
-userJourney :: UserType -> [Appointment] -> [LogEntry] -> [GymWorkPlan] -> IO ()
-userJourney userType appointments log gymWorkPlans = 
+userJourney :: UserType -> [Credentials] -> [Credentials] -> [Appointment] -> [LogEntry] -> [GymWorkPlan] -> IO ()
+userJourney userType  userCredentials coachCredentials appointments log gymWorkPlans = 
     case userType of
         -- For User
         User _ -> 
@@ -938,7 +963,7 @@ userJourney userType appointments log gymWorkPlans =
                             putStrLn ("For a " ++ show experience ++ " focusing on building " ++ show goal ++ ".") >>
                             let recommendation = getRecommendation experience goal
                             in putStrLn recommendation >> 
-                            userJourney userType appointments log gymWorkPlans
+                            userJourney userType userCredentials coachCredentials appointments log gymWorkPlans
                     GymWork ->
                         (askQuestion :: IO Exercise) >>= \exercise ->
                             putStrLn ("You selected: " ++ show exercise) >>
@@ -949,23 +974,23 @@ userJourney userType appointments log gymWorkPlans =
                                    putStrLn ("You selected workout: " ++ workoutChoice) >>
                                    logWorkout workoutChoice >>= \logEntry ->
                                        let updatedLog = if workoutName logEntry /= "" then logEntry : log else log
-                                       in userJourney userType appointments updatedLog gymWorkPlans
+                                       in userJourney userType userCredentials coachCredentials appointments updatedLog gymWorkPlans
                     MakeAppointment ->
                         let userEmail = getUserEmail userType
                         in makeAppointment userEmail coachAvailability appointments >>= \updatedAppointments ->
-                            userJourney userType updatedAppointments log gymWorkPlans
+                            userJourney userType userCredentials coachCredentials updatedAppointments log gymWorkPlans
                     CustomPlan ->
                         customizeGymWorkPlan >>= \customizedPlan ->
-                            userJourney userType appointments log (customizedPlan : gymWorkPlans)
+                            userJourney userType userCredentials coachCredentials appointments log (customizedPlan : gymWorkPlans)
                     ViewLog ->
                         displayLog log >>
-                        userJourney userType appointments log gymWorkPlans
+                        userJourney userType userCredentials coachCredentials appointments log gymWorkPlans
                     ViewCustomPlan ->
-                        displayPlanByName gymWorkPlans >>
-                        userJourney userType appointments log gymWorkPlans
+                        viewPlanByName gymWorkPlans >>
+                        userJourney userType userCredentials coachCredentials appointments log gymWorkPlans
                     GoBackToLogin ->
                         putStrLn "Returning to the login screen...\n" >>
-                        getChoice >> performLogin appointments log gymWorkPlans
+                        mainMenu userCredentials coachCredentials appointments log gymWorkPlans
 
         -- For Coach
         Coach (Credentials coachEmail _) ->
@@ -978,34 +1003,29 @@ userJourney userType appointments log gymWorkPlans =
             getLine >>= \action ->
                 if action == "1"
                     then putStrLn "\nReturning to the login screen..." >>
-                         getChoice >> performLogin appointments log gymWorkPlans
+                         mainMenu userCredentials coachCredentials appointments log gymWorkPlans
                     else putStrLn "Invalid selection. Please choose '1' to go back to the login screen." >>
-                         userJourney (Coach (Credentials coachEmail "")) appointments log gymWorkPlans
+                         userJourney (Coach (Credentials coachEmail "")) userCredentials coachCredentials appointments log gymWorkPlans
 
 
--- Function to display the login menu and get user choice
-getChoice :: IO Int
-getChoice =
-    putStrLn "***************************************" >>
+mainMenu :: [Credentials] -> [Credentials] -> [Appointment] -> [LogEntry] -> [GymWorkPlan] -> IO ()
+mainMenu userCredentials coachCredentials apt log plan = 
+    putStrLn "\n***************************************" >>
     putStrLn "     Welcome to the FitGym System      " >>
     putStrLn "***************************************" >>
     putStrLn "1. Login" >>
-    putStrLn "2. Exit" >>
+    putStrLn "2. Sign Up" >>
+    putStrLn "3. Exit" >>
     putStr "Enter your choice: " >>
     getLine >>= \choice ->
-       case readMaybe choice :: Maybe Int of
-              Just input ->
-                     return input
-              Nothing ->
-                     putStrLn "Invalid choice. Please enter a number.\n" >>
-                     getChoice
+        case choice of
+            "1" -> performLogin userCredentials coachCredentials apt log plan
+            "2" -> signUp userCredentials coachCredentials >>= \(newUserCredentials, newCoachCredentials) ->
+                mainMenu newUserCredentials newCoachCredentials apt log plan
+            "3" -> putStrLn "Exiting the system. Goodbye!"
+            _   -> putStrLn "Invalid choice. Please try again." >>
+                   mainMenu userCredentials coachCredentials apt log plan
 
 -- Main function
 main :: IO ()
-main = getChoice >>= \choice ->
-       case choice of
-              1 -> performLogin [] [] []
-              2 -> putStrLn "Exiting the system. Goodbye!"
-              _ ->
-                     putStrLn "Invalid choice. Please try again.\n" >>
-                     main -- Recursively call main to allow another attempt
+main = mainMenu predefinedUserCredentials predefinedCoachCredentials [] [] []

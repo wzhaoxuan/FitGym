@@ -852,7 +852,6 @@ hasAvailability coach =
   where
     hasTimes (_, times) = not (null times)  -- Check if the times list is not empty
 
-
 -- Function to get available days from coach's availability
 getAvailableDays :: Availability -> [String]
 getAvailableDays coach = 

@@ -813,18 +813,19 @@ showCoaches coaches =
 -- Main function to make an appointment
 makeAppointment :: String -> [Availability] -> [Appointment] -> IO ([Appointment], [Availability])
 makeAppointment userEmail coachAvailability appointments =
-  showCoaches coachAvailability >>= \coachStatus ->
+  let availableCoaches = filter hasAvailability coachAvailability -- Filter out coaches with no availability
+  in showCoaches availableCoaches >>= \coachStatus ->
     case coachStatus of
       Nothing ->
         putStrLn "Returning to your user journey..." >>
         return (appointments, coachAvailability)  -- Returning appointments to continue the flow
-      Just _ ->
-        let coachEmails = map emailCoach coachAvailability
+      Just _ -> 
+        let coachEmails = map emailCoach availableCoaches
         in retryOnInvalid (selectOption "Choose a coach:" coachEmails) "Invalid coach selection. Please try again." >>= \selectedCoachEmail ->
-          let selectedCoachAvailability = find (\coach -> emailCoach coach == selectedCoachEmail) coachAvailability
+          let selectedCoachAvailability = find (\coach -> emailCoach coach == selectedCoachEmail) availableCoaches
           in case selectedCoachAvailability of
             Just availability ->
-              retryOnInvalid (selectOption "\nAvailable days:" (availableDays availability)) "Invalid date selection. Please try again." >>= \selectedDate ->
+              retryOnInvalid (selectOption "\nAvailable days:" (getAvailableDays availability)) "Invalid date selection. Please try again." >>= \selectedDate ->
                 let timesForDate = fromMaybe [] $ lookup selectedDate (time availability)
                 in retryOnInvalid (selectOption "\nAvailable times:" timesForDate) "Invalid time selection. Please try again." >>= \selectedTime ->
                   let newAppointment = Appointment
@@ -844,9 +845,17 @@ makeAppointment userEmail coachAvailability appointments =
               putStrLn "Selected coach not found. Aborting..." >>
               return (appointments, coachAvailability)
 
+-- Helper function to check if a coach has any available times
+hasAvailability :: Availability -> Bool
+hasAvailability coach = 
+    any hasTimes (time coach)
+  where
+    hasTimes (_, times) = not (null times)  -- Check if the times list is not empty
+
+
 -- Function to get available days from coach's availability
-availableDays :: Availability -> [String]
-availableDays coach = 
+getAvailableDays :: Availability -> [String]
+getAvailableDays coach = 
     map fst $ filter hasAvailableTimes (time coach)
   where
     hasAvailableTimes (_, times) = not (null times)

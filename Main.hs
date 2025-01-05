@@ -807,7 +807,7 @@ showCoaches coaches =
   where
     displayCoachAvailability coach =
         putStrLn ("Coach: " ++ emailCoach coach) >>
-        mapM_ (\(d, t) -> putStrLn ("  " ++ d ++ ": " ++ unwords t)) (time coach) >>
+        mapM_ (\(date, time) -> putStrLn ("  " ++ date ++ ": " ++ unwords time)) (time coach) >>
         putStrLn ""
 
 -- Main function to make an appointment
@@ -824,7 +824,7 @@ makeAppointment userEmail coachAvailability appointments =
           let selectedCoachAvailability = find (\coach -> emailCoach coach == selectedCoachEmail) coachAvailability
           in case selectedCoachAvailability of
             Just availability ->
-              retryOnInvalid (selectOption "\nAvailable days:" (day availability)) "Invalid date selection. Please try again." >>= \selectedDate ->
+              retryOnInvalid (selectOption "\nAvailable days:" (availableDays availability)) "Invalid date selection. Please try again." >>= \selectedDate ->
                 let timesForDate = fromMaybe [] $ lookup selectedDate (time availability)
                 in retryOnInvalid (selectOption "\nAvailable times:" timesForDate) "Invalid time selection. Please try again." >>= \selectedTime ->
                   let newAppointment = Appointment
@@ -844,6 +844,13 @@ makeAppointment userEmail coachAvailability appointments =
               putStrLn "Selected coach not found. Aborting..." >>
               return (appointments, coachAvailability)
 
+-- Function to get available days from coach's availability
+availableDays :: Availability -> [String]
+availableDays coach = 
+    map fst $ filter hasAvailableTimes (time coach)
+  where
+    hasAvailableTimes (_, times) = not (null times)
+
 -- Function to update coach availability
 updateAvailability :: String -> String -> String -> [Availability] -> [Availability]
 updateAvailability coachEmail selectedDate selectedTime = 
@@ -852,11 +859,14 @@ updateAvailability coachEmail selectedDate selectedTime =
     updateCoach coach
         | emailCoach coach == coachEmail = 
             let updatedTimes = 
-                    map (\(d, ts) -> if d == selectedDate 
-                                      then (d, filter (/= selectedTime) ts)
-                                      else (d, ts)) 
+                    map (\(date, time) -> 
+                            if date == selectedDate 
+                            then (date, filter (/= selectedTime) time)
+                            else (date, time)) 
                         (time coach)
-            in coach { time = filter (not . null . snd) updatedTimes }
+                -- Explicit check if the second element (time list) is non-empty
+                nonEmptyTimes = filter (\(_, time) -> not (null time)) updatedTimes
+            in coach { time = nonEmptyTimes }
         | otherwise = coach
 
 -- Helper function to display and select an option from a list
